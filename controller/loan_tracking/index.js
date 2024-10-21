@@ -20,14 +20,15 @@ const LoanTrackingController = {
           resolve(res.status(200).send(Utility.formatResponse(200, loanTracking)));
         })
         .catch((err) => {
-          console.error("Error creating loan provider:", err);
+          console.log("Error creating loan provider:", err);
           reject(res.status(500).send(Utility.formatResponse(500, err)));
         });
     });
   },
 
   getLoanTracking: (req, res) => {
-    const { limit = 5, offset = 0 } = req.body;
+    const { limit = 10, offset = 0 } = req.body;
+
     return new Promise((resolve, reject) => {
       LoanTrackingModel.findAndCountAll({
         limit: parseInt(limit),
@@ -46,7 +47,7 @@ const LoanTrackingController = {
           }
         })
         .catch((err) => {
-          console.error("Error fetching loan providers:", err);
+          console.log("Error fetching loan providers:", err);
           reject(res.status(500).send(Utility.formatResponse(500, err)));
         });
     });
@@ -75,7 +76,24 @@ const LoanTrackingController = {
           );
         });
     });
-  }
+  },
+
+
+  /** Updating loan_tracking in the database
+   */
+  updateLoanTracking: (req, res) => {
+    const payload = req.body;
+
+    return new Promise((resolve, reject) => {
+      LoanTrackingModel.update(payload, { where: { customer_application_id: payload.customer_application_id } })
+        .then(() => {
+          resolve(res.status(200).send(Utility.formatResponse(200, `Updated Successfully`)));
+        })
+        .catch(err => {
+          reject(res.status(500).send(Utility.formatResponse(500, err)));
+        });
+    });
+  },
 };
 
 module.exports = LoanTrackingController;

@@ -103,6 +103,7 @@ router.get(
   LoanTrackingController.getLoanTrackingById
 );
 router.post("/create-loan-tracking", LoanTrackingController.createLoanTracking);
+router.patch("/update-loan-tracking", LoanTrackingController.updateLoanTracking);
 
 //-----------------------------------NOTIFICATIONS---------------------------------------
 router.get("/get-notifications/:id", NotificationController.getNotifications);
