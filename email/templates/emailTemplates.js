@@ -15,9 +15,9 @@ const getWelcomeEmailOptions = (customer, pw) => {
             <p style="font-size: 18px; color: #2c3ce3;">Hello <b>${customer.name}!</b></p>
             <p style="font-size: 16px; color: #555;">We're glad to have you on board at F2 Fintech.</p>
             <p style="font-size: 16px; color: #555;">We have created your account with us.</p>
-            <p style="font-size: 16px; color: #555;">Here are the login credentials: <br />Contact Number : ${customer.contact} </p>
-            <span style="font-size: 16px; color: #555;">Password       : ${pw} </span>
-            <span style="font-size: 16px; color: #555;">Click the button below to go to login page</span>
+            <span style="font-size: 16px; color: #555;">Here are the login credentials: <br />Contact Number : ${customer.contact}<br /> </span>
+            <span style="font-size: 16px; color: #555;">Password       : ${pw} </span><br />
+            <p style="font-size: 16px; color: #555;">Click the button below to go to login page</p>
             <p style="margin: 20px 0;">
             <a href="https://f2fintech-web.netlify.app/login" 
                style="
@@ -36,8 +36,7 @@ const getWelcomeEmailOptions = (customer, pw) => {
               Go To Login Page
             </a>
             </p>
-            <br />
-            <span style="font-size: 16px; color: #555;">Click the button below to reset your password</span>
+            <p style="font-size: 16px; color: #555;">Click the button below to reset your password</p>
             <p style="margin: 20px 0;">
               <a href="https://f2fintech-web.netlify.app/reset-password" 
                  style="
