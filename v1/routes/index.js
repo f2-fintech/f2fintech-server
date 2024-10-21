@@ -61,11 +61,13 @@ router.post("/remove-favourite", CustomerFavouriteController.removeFavourite);
 router.post("/create-customer-info", CustomerInfoController.createCustomerInfo);
 router.get("/get-customer-info", CustomerInfoController.getCustomerInfo);
 router.get("/customer-info/:id", CustomerInfoController.getCustomerInfoById);
+router.patch("/customer-info-update", CustomerInfoController.updateCustomerInfo);
 router.get("/get-customer-profile/:id", CustomerController.getCustomerProfile);
 router.post("/reset-password", CustomerController.resetPassword);
 router.post(
   "/update-customer-profile",
   CustomerController.updateCustomerProfile
+
 );
 
 //-----------------------------------CUSTOMER REVIEW---------------------------------------

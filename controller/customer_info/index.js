@@ -50,6 +50,7 @@ const CustomerInfoController = {
 
   getCustomerInfoById: (req, res) => {
     const id = req.params.id;
+
     return new Promise((resolve, reject) => {
       CustomerInfoModel.findOne({ where: { customer_id: id } })
         .then((result) => {
@@ -70,6 +71,21 @@ const CustomerInfoController = {
         });
     });
   },
+
+  updateCustomerInfo: (req, res) => {
+    const payload = req.body;
+
+    // Update the customer info
+    return new Promise((resolve, reject) => {
+      CustomerInfoModel.update(payload, { where: { customer_id: payload.customer_id } })
+        .then(() => {
+          resolve(res.status(200).send(Utility.formatResponse(200, "Customer info updated successfully")));
+        })
+        .catch((err) => {
+          reject(res.status(500).send(Utility.formatResponse(500, err)));
+        });
+    })
+  }
 };
 
 module.exports = CustomerInfoController;

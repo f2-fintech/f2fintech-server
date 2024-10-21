@@ -33,6 +33,15 @@ const CustomerInfoModel = sequelize.define(
       type: Sequelize.ENUM,
       values: ['salaried', 'non-salaried', 'professional'],
     },
+    salary: {
+      type: Sequelize.INTEGER,
+    },
+    existing_emi: {
+      type: Sequelize.INTEGER,
+    },
+    existing_liability: {
+      type: Sequelize.INTEGER,
+    },
     occupation: {
       type: Sequelize.STRING,
     },
@@ -65,7 +74,7 @@ const CustomerInfoModel = sequelize.define(
     },
     referral_id: {
       type: Sequelize.INTEGER,
-    }
+    },
   },
   {
     freezeTableName: true,

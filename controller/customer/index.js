@@ -58,7 +58,7 @@ const CustomerController = {
               resolve(
                 res
                   .status(200)
-                  .send(Utility.formatResponse(200, { token, id: customer.id }))
+                  .send(Utility.formatResponse(200, { token, id: customer.id, name: customer.name }))
               );
             })
             .catch((err) => {
