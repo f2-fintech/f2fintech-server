@@ -121,4 +121,8 @@ router.post("/create-query-response", QueryResponseController.createQueryRespons
 router.get("/get-query-response", QueryResponseController.getQueryResponse);
 router.put("/update-query-response", QueryResponseController.updateQueryResponse);
 
+//-----------------------------------TEST EMAIL---------------------------------------
+router.post("/send-email", QueryResponseController.sendemail);
+
+
 module.exports = router;

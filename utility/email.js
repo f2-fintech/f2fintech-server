@@ -15,24 +15,26 @@ const nodemailer = require("nodemailer");
  * @param {String} subject - email subject
  * @return {Promise} - resolves if email is sent successfully
  */
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey('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'); // Replace with your SendGrid API key
+
+/**
+ * Send an email using SendGrid
+ * @param {Object} mailOptions - email options (to, subject, text, html)
+ * @return {Promise} - resolves if email is sent successfully
+ */
 const sendEmail = (mailOptions) => {
   return new Promise((resolve, reject) => {
-    let transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "atechno27@gmail.com",
-        pass: "qphu mqpk bkuy dxch",
-      },
-    });
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("getting email error", error);
-        resolve();
-      } else {
-        resolve();
-      }
-    });
+    sgMail
+      .send(mailOptions)
+      .then(() => {
+        console.log('email sent successfully')
+        resolve(); // Email sent successfully
+      })
+      .catch((error) => {
+        console.log("Error sending email with SendGrid:", error);
+        reject(); // Handle email failure
+      });
   });
 };
 
