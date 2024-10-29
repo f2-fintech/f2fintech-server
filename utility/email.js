@@ -6,33 +6,35 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const nodemailer = require("nodemailer");
+require('dotenv').config();
+const sgMail = require('@sendgrid/mail');
 
+// Use SendGrid API key from environment variable
+const apiSendGrid = process.env.SENDGRID_API_KEY
+sgMail.setApiKey(apiSendGrid);
 
 /**
- * Send an email
- * @param {String} to - recipient email address
- * @param {String} subject - email subject
+ * Send an email using SendGrid
+ * @param {Object} mailOptions - email options (to, subject, text, html, from)
  * @return {Promise} - resolves if email is sent successfully
  */
 const sendEmail = (mailOptions) => {
   return new Promise((resolve, reject) => {
-    let transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: "atechno27@gmail.com",
-        pass: "qphu mqpk bkuy dxch",
-      },
-    });
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.log("getting email error", error);
-        resolve();
-      } else {
-        resolve();
-      }
-    });
+    // Validate required fields in mailOptions
+    if (!mailOptions.to || !mailOptions.subject || !mailOptions.from) {
+      return reject(new Error('Missing required fields: to, subject, or from'));
+    }
+    console.log("sendingEmail", process.env.SENDGRID_API_KEY)
+    sgMail
+      .send(mailOptions)
+      .then(() => {
+        console.log('Email sent successfully');
+        resolve(); // Email sent successfully
+      })
+      .catch((error) => {
+        console.error('Error sending email with SendGrid:', error);
+        reject(error); // Handle email failure
+      });
   });
 };
 

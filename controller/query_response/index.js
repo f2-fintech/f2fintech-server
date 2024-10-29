@@ -8,6 +8,7 @@
 
 const Utility = require("../../utility");
 const QueryResponseModel = require("../../model/query_response");
+const sendEmail = require("../../utility/email");
 
 const QueryResponseController = {
     createQueryResponse: (req, res) => {
@@ -78,7 +79,28 @@ const QueryResponseController = {
                 });
         });
     },
+    sendemail: (req, res) => {
+        const payload = req.body;
+        const mailOptions = {
+            to: 'aafaqahmad0123@gmail.com', // Replace with a dummy email
+            from: 'adusmanibi17@gmail.com',    // Use your domain or a verified sender
+            subject: 'Welcome to F2 Fintech!',
+            text: 'This is a test email sent from F2 Fintech.',
+            html: '<strong>This is a test email sent from F2 Fintech.</strong>',
+            mailSettings: {
+                sandboxMode: {
+                    enable: false,  // Enable sandbox mode for testing (set to false to actually send emails)
+                },
+            },
+        };
 
+        return new Promise((resolve, reject) => {
+            console.log("sendng email")
+            sendEmail(mailOptions).then(response => {
+                res.status(200).send(Utility.formatResponse(200, "Email sent Successful"))
+            })
+        });
+    },
 };
 
 module.exports = QueryResponseController;
