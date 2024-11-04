@@ -25,11 +25,11 @@ module.exports = {
   SECRET: process.env.SECRET || "F#2@FIN!&TECH%20",
   BUCKET: process.env.BUCKET_NAME || "f2fintechcustomerdocs",
   REGION: process.env.REGION || "eu-north-1",
-  ACCESS_KEY: process.env.ACCESS_KEY_ID,
+  ACCESS_KEY: process.env.ACCESS_KEY_ID || "AKIA6ODU4552XISEIQKP",
   SECRET_KEY:
-    process.env.SECRET_KEY_ID,
+    process.env.SECRET_KEY_ID || "dEFHxtdu4pqLUoZtOMU59NpBLwR427NwlFpBOAn3",
   S3_PATHNAME:
     process.env.S3_PATHNAME ||
     "https://f2fintechcustomerdoc.s3.ap-southeast-1.amazonaws.com/",
-  SENDER_EMAIL: process.env.SENDER_EMAIL
+  SENDER_EMAIL: process.env.SENDER_EMAIL || 'adusmanibi17@gmail.com'
 };
