@@ -14,24 +14,27 @@ const CustomerInfoModel = sequelize.define(
   "customer_info",
   {
     customer_id: {
-      type: Sequelize.INTEGER
+      type: Sequelize.INTEGER,
+    },
+    mother_name: {
+      type: Sequelize.STRING,
     },
     pan: {
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     aadhaar: {
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     bank: {
-      type: Sequelize.STRING
+      type: Sequelize.STRING,
     },
     bank_ac_type: {
       type: Sequelize.ENUM,
-      values: ['current', 'savings', 'fixed deposit', 'recurring deposit'],
+      values: ["current", "savings", "fixed deposit", "recurring deposit"],
     },
     occupation_type: {
       type: Sequelize.ENUM,
-      values: ['salaried', 'business', 'professional'],
+      values: ["salaried", "business", "professional"],
     },
     salary: {
       type: Sequelize.INTEGER,
