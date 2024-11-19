@@ -19,6 +19,9 @@ const CustomerInfoModel = sequelize.define(
     pan: {
       type: Sequelize.STRING
     },
+    mother_name: {
+      type: Sequelize.STRING,
+    },
     aadhaar: {
       type: Sequelize.STRING
     },
