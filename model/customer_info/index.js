@@ -22,7 +22,19 @@ const CustomerInfoModel = sequelize.define(
     pan: {
       type: Sequelize.STRING,
     },
+    father_name: {
+      type: Sequelize.STRING,
+    },
     mother_name: {
+      type: Sequelize.STRING,
+    },
+    working_address: {
+      type: Sequelize.STRING,
+    },
+    permanent_address: {
+      type: Sequelize.STRING,
+    },
+    current_address: {
       type: Sequelize.STRING,
     },
     aadhaar: {

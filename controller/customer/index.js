@@ -66,6 +66,7 @@ const CustomerController = {
             });
         })
         .catch((err) => {
+          console.log("error", err)
           reject(res.status(500).send(Utility.formatResponse(500, err)));
         });
     });
