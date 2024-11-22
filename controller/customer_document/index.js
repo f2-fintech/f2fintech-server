@@ -82,10 +82,13 @@ const CustomerDocumentController = {
         "text/plain",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
         "application/msword", // .doc
-        "application/pdf" // .pdf
+        "application/pdf", // .pdf
       ];
 
-      if (!allowedMimeTypes.includes(document.mimetype)) {
+      const isAudioFile = document.mimetype.startsWith("audio/");
+
+      if (!allowedMimeTypes.includes(document.mimetype) && !isAudioFile) {
+        console.error("Invalid MIME type:", document.mimetype);
         return res
           .status(400)
           .send(Utility.formatResponse(400, "Invalid file type"));
@@ -93,6 +96,7 @@ const CustomerDocumentController = {
 
       Utility.uploadToS3(folder, document, res);
     } catch (err) {
+      console.log("err", err)
       res.status(500).send(Utility.formatResponse(500, err));
     }
   },

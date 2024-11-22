@@ -19,6 +19,7 @@ const LoanTrackingController = require("../../controller/loan_tracking");
 const NotificationController = require("../../controller/notification");
 const QueryController = require("../../controller/query");
 const QueryResponseController = require("../../controller/query_response");
+const ForgotPasswordController = require("../../controller/forgot_passsword")
 
 const { checkAuthenticated } = require("../../config/passportConfig");
 
@@ -120,6 +121,14 @@ router.get("/get-query", QueryController.getQueries);
 router.post("/create-query-response", QueryResponseController.createQueryResponse);
 router.get("/get-query-response", QueryResponseController.getQueryResponse);
 router.put("/update-query-response", QueryResponseController.updateQueryResponse);
+
+
+
+//-----------------------------------FORGOT PASSWORD OTP---------------------------------------
+router.post("/forgot-password/send-otp", ForgotPasswordController.sendOtp);
+
+
+
 
 //-----------------------------------TEST EMAIL---------------------------------------
 router.post("/send-email", QueryResponseController.sendemail);

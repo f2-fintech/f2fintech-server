@@ -33,6 +33,8 @@ const CustomerDocumentModel = sequelize.define(
         "payslips",
         "profile",
         "photo",
+        "certificate",
+        "audio",
       ],
     },
   },
