@@ -40,36 +40,43 @@ const login = (req, res, next) => {
 };
 
 const CustomerController = {
-  register: (req, res) => {
-    const payload = req.body;
-    const unhashedPassword = payload.password;
+  register: async (req, res) => {
+    try {
+      const payload = req.body;
+      const unhashedPassword = payload.password;
 
-    return new Promise((resolve, reject) => {
-      Utility.createHash(payload.password)
-        .then((hash) => {
-          payload.password = hash;
-          CustomerModel.create({ ...payload })
-            .then((customer) => {
-              const welcomeMailOptions = getWelcomeEmailOptions(customer, unhashedPassword);
-              sendEmail(welcomeMailOptions).catch((err) =>
-                console.log("Error sending welcome email:", err)
-              );
-              const token = Utility.getSignedToken(customer.id);
-              resolve(
-                res
-                  .status(200)
-                  .send(Utility.formatResponse(200, { token, id: customer.id, name: customer.name }))
-              );
-            })
-            .catch((err) => {
-              reject(res.status(500).send(Utility.formatResponse(500, err)));
-            });
-        })
-        .catch((err) => {
-          console.log("error", err)
-          reject(res.status(500).send(Utility.formatResponse(500, err)));
-        });
-    });
+      // Hash the password
+      const hash = await Utility.createHash(payload.password);
+      payload.password = hash;
+
+      // Create the customer
+      const customer = await CustomerModel.create({ ...payload });
+
+      // Send the welcome email
+      const welcomeMailOptions = getWelcomeEmailOptions(customer, unhashedPassword);
+      sendEmail(welcomeMailOptions).catch((err) =>
+        console.log("Error sending welcome email:", err)
+      );
+
+      // Generate token
+      const token = Utility.getSignedToken(customer.id);
+
+      // Send response
+      return res
+        .status(200)
+        .send(Utility.formatResponse(200, { token, id: customer.id, name: customer.name }));
+    } catch (err) {
+      // Handle unique contact violation
+      if (err.parent?.code === 'ER_DUP_ENTRY') { // Adjust error code based on your database
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, err.parent?.sqlMessage));
+      }
+
+      // Log unexpected errors and send a generic response
+      console.error("Error during registration:", err);
+      return res.status(500).send(Utility.formatResponse(500, "Internal server error."));
+    }
   },
 
   updateCustomer: (req, res) => {
