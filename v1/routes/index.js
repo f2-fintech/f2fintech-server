@@ -124,12 +124,6 @@ router.put("/update-query-response", QueryResponseController.updateQueryResponse
 
 
 
-//-----------------------------------FORGOT PASSWORD OTP---------------------------------------
-router.post("/forgot-password/send-otp", ForgotPasswordController.sendOtp);
-
-
-
-
 //-----------------------------------TEST EMAIL---------------------------------------
 router.post("/send-email", QueryResponseController.sendemail);
 
