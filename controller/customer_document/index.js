@@ -83,6 +83,9 @@ const CustomerDocumentController = {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
         "application/msword", // .doc
         "application/pdf", // .pdf
+        "audio/mpeg", // .mp3
+        "audio/wav", // .wav
+        "audio/ogg", // .ogg
       ];
 
       const isAudioFile = document.mimetype.startsWith("audio/");
@@ -96,7 +99,7 @@ const CustomerDocumentController = {
 
       Utility.uploadToS3(folder, document, res);
     } catch (err) {
-      console.log("err", err)
+      console.log("err", err);
       res.status(500).send(Utility.formatResponse(500, err));
     }
   },
