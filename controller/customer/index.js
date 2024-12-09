@@ -6,6 +6,7 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
+const bcrypt = require('bcryptjs');
 const passport = require("passport");
 
 const CustomerModel = require("../../model/customer");
@@ -214,32 +215,43 @@ const CustomerController = {
     });
   },
 
-  resetPassword: (req, res) => {
-    const { customerId, newPassword } = req.body;
+  resetPassword: async (req, res) => {
+    const { customerId, currentPassword, newPassword, isOtpTrue } = req.body;
 
-    CustomerModel.findOne({ where: { id: customerId } })
-      .then((existingCustomer) => {
-        if (!existingCustomer) {
+    try {
+      // Check if customer exists
+      const existingCustomer = await CustomerModel.findOne({ where: { id: customerId } });
+      if (!existingCustomer) {
+        return res
+          .status(404)
+          .send(Utility.formatResponse(404, "Customer not found"));
+      }
+
+      // Validate currentPassword if OTP is not used
+      if (!isOtpTrue) {
+        const isPasswordValid = await Utility.comparePassword(currentPassword, existingCustomer.password);
+        if (!isPasswordValid) {
           return res
-            .status(404)
-            .send(Utility.formatResponse(404, "Customer not found"));
+            .status(400)
+            .send(Utility.formatResponse(400, "Current password is incorrect"));
         }
+      }
 
-        return Utility.createHash(newPassword);
-      })
-      .then((hash) => {
-        return CustomerModel.update(
-          { password: hash },
-          { where: { id: customerId } }
-        );
-      })
-      .then(() => {
-        res.status(200).send(Utility.formatResponse(200, "Success"));
-      })
-      .catch((err) => {
-        res.status(500).send(Utility.formatResponse(500, err));
-      });
+      // Hash the new password and update it
+      const hashedNewPassword = await Utility.createHash(newPassword);
+      await existingCustomer.update({ password: hashedNewPassword });
+
+      return res
+        .status(200)
+        .send(Utility.formatResponse(200, "Password reset successfully"));
+    } catch (error) {
+      console.error("Error resetting password for customerId:", customerId, "\nError details:", error);
+      return res
+        .status(500)
+        .send(Utility.formatResponse(500, "Internal server error"));
+    }
   },
+
 
   updateCustomerProfile: (req, res) => {
     const { customerId, name, email, gender, contact } = req.body;
