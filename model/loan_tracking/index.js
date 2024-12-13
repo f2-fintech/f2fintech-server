@@ -25,7 +25,7 @@ const LoanTrackingModel = sequelize.define(
         'carry forward',
         'drop',
         'relook',
-        'approved
+        'approved'
       ],
     },
     updated_at: {
