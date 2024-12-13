@@ -19,12 +19,13 @@ const LoanTrackingModel = sequelize.define(
     status: {
       type: Sequelize.ENUM,
       values: [
-        "submitted",
-        "under_review",
-        "approved",
-        "hold",
-        "disbursed",
-        "rejected",
+        'submitted',
+        'under credit review',
+        'login',
+        'carry forward',
+        'drop',
+        'relook',
+        'approved
       ],
     },
     updated_at: {
