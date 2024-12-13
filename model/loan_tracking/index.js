@@ -25,6 +25,11 @@ const LoanTrackingModel = sequelize.define(
         "hold",
         "disbursed",
         "rejected",
+        "drop",
+        "relook",
+        "carry_forward",
+        "login"
+
       ],
     },
     updated_at: {
