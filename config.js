@@ -14,22 +14,21 @@ dotenv.config({
 });
 
 module.exports = {
-  NODE_ENV: process.env.NODE_ENV || "local",
-  HOST: process.env.HOST || "localhost",
+  NODE_ENV: process.env.NODE_ENV ?? "deployment",
+  HOST: process.env.HOST,
   PORT: process.env.PORT || 8080,
-  DB: process.env.DB || "f2-fintech",
+  DB: process.env.DB,
   DB_PORT: process.env.DB_PORT || 3306,
-  DB_USERNAME: process.env.DB_USERNAME || "root",
-  DB_PASSWORD: process.env.DB_PASSWORD || "",
+  DB_USERNAME: process.env.DB_USERNAME,
+  DB_PASSWORD: process.env.DB_PASSWORD,
   SALT: process.env.SALT || 12,
   SECRET: process.env.SECRET || "F#2@FIN!&TECH%20",
-  BUCKET: process.env.BUCKET_NAME || "f2fintechcustomerdocs",
-  REGION: process.env.REGION || "eu-north-1",
-  ACCESS_KEY: process.env.ACCESS_KEY_ID || "AKIA6ODU4552XISEIQKP",
+  BUCKET: process.env.BUCKET_NAME,
+  REGION: process.env.REGION,
+  ACCESS_KEY: process.env.ACCESS_KEY_ID,
   SECRET_KEY:
-    process.env.SECRET_KEY_ID || "dEFHxtdu4pqLUoZtOMU59NpBLwR427NwlFpBOAn3",
+    process.env.SECRET_KEY_ID,
   S3_PATHNAME:
-    process.env.S3_PATHNAME ||
-    "https://f2fintechcustomerdoc.s3.ap-southeast-1.amazonaws.com/",
-  SENDER_EMAIL: process.env.SENDER_EMAIL || 'adusmanibi17@gmail.com'
+    process.env.S3_PATHNAME,
+  SENDER_EMAIL: process.env.SENDER_EMAIL
 };
