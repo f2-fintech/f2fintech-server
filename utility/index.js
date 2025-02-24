@@ -88,8 +88,6 @@ const Utility = {
     try {
       // Upload the file to S3 using the PutObjectCommand
       const data = await s3Client.send(new PutObjectCommand(params));
-      console.log("data", data)
-
       // The uploaded file URL will need to be manually constructed since v3 doesn't directly return a location
       const fileLocation = `https://${bucketName}.s3.${region}.amazonaws.com/${folder}`;
 

@@ -16,8 +16,14 @@ const CustomerApplication = sequelize.define(
     customer_id: {
       type: Sequelize.INTEGER,
     },
+    applied_by: {
+      type: Sequelize.INTEGER,
+    },
     application_no: {
       type: Sequelize.INTEGER,
+    },
+    provider: {
+      type: Sequelize.STRING,
     },
     amount: {
       type: Sequelize.DECIMAL,
