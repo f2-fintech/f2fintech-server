@@ -86,6 +86,7 @@ const CustomerDocumentController = {
         "audio/mpeg", // .mp3
         "audio/wav", // .wav
         "audio/ogg", // .ogg
+        "audio/dat", // .dat
       ];
 
       const isAudioFile = document.mimetype.startsWith("audio/");
