@@ -71,32 +71,32 @@ const CustomerDocumentController = {
       }
 
       // Validate file type (images, .txt, .doc, .docx)
-      const allowedMimeTypes = [
-        "image/avif",
-        "image/jpeg",
-        "image/jpg",
-        "image/png",
-        "image/gif",
-        "image/bmp",
-        "image/webp",
-        "text/plain",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-        "application/msword", // .doc
-        "application/pdf", // .pdf
-        "audio/mpeg", // .mp3
-        "audio/wav", // .wav
-        "audio/ogg", // .ogg
-        "audio/dat", // .dat
-      ];
+      // const allowedMimeTypes = [
+      //   "image/avif",
+      //   "image/jpeg",
+      //   "image/jpg",
+      //   "image/png",
+      //   "image/gif",
+      //   "image/bmp",
+      //   "image/webp",
+      //   "text/plain",
+      //   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+      //   "application/msword", // .doc
+      //   "application/pdf", // .pdf
+      //   "audio/mpeg", // .mp3
+      //   "audio/wav", // .wav
+      //   "audio/ogg", // .ogg
+      //   "audio/dat", // .dat
+      // ];
 
-      const isAudioFile = document.mimetype.startsWith("audio/");
+      // const isAudioFile = document.mimetype.startsWith("audio/");
 
-      if (!allowedMimeTypes.includes(document.mimetype) && !isAudioFile) {
-        console.error("Invalid MIME type:", document.mimetype);
-        return res
-          .status(400)
-          .send(Utility.formatResponse(400, "Invalid file type"));
-      }
+      // if (!allowedMimeTypes.includes(document.mimetype) && !isAudioFile) {
+      //   console.error("Invalid MIME type:", document.mimetype);
+      //   return res
+      //     .status(400)
+      //     .send(Utility.formatResponse(400, "Invalid file type"));
+      // }
 
       Utility.uploadToS3(folder, document, res);
     } catch (err) {
