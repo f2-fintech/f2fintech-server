@@ -96,6 +96,7 @@ router.get(
 //-----------------------------------LOAN PROVIDER---------------------------------------
 router.get("/get-loan-provider", LoanProviderController.getLoanProvider);
 router.post("/create-loan-provider", LoanProviderController.createLoanProvider);
+router.get("/get-provider-by-country", LoanProviderController.getLoanProviderByCountry);
 
 //-----------------------------------LOAN TRACKING---------------------------------------
 router.get("/get-loan-tracking", LoanTrackingController.getLoanTracking);
