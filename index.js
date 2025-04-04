@@ -22,7 +22,9 @@ let { connectToMysql } = require("./db");
 const app = express();
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "https://f2fintech-web.netlify.app", "https://admin-f2fintech.netlify.app", "https://admin.f2fintech.in", "https://f2fintech.com"], //this will allow multiple domains to connect
+  origin: ["http://localhost:5173", "http://localhost:3000", "http://localhost:3001",
+    "https://f2fintech-web.netlify.app", "https://admin-f2fintech.netlify.app",
+    "https://admin.f2fintech.in", "https://f2fintech.com", "http://127.0.0.1:5173"], //this will allow multiple domains to connect
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
