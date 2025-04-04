@@ -20,6 +20,8 @@ const NotificationController = require("../../controller/notification");
 const QueryController = require("../../controller/query");
 const QueryResponseController = require("../../controller/query_response");
 const ForgotPasswordController = require("../../controller/forgot_passsword")
+const GetInTouchController = require("../../controller/get_in_touch")
+
 
 const { checkAuthenticated } = require("../../config/passportConfig");
 
@@ -122,6 +124,10 @@ router.get("/get-query", QueryController.getQueries);
 router.post("/create-query-response", QueryResponseController.createQueryResponse);
 router.get("/get-query-response", QueryResponseController.getQueryResponse);
 router.put("/update-query-response", QueryResponseController.updateQueryResponse);
+
+
+//-----------------------------------GET IN TOUCH---------------------------------------
+router.post("/get-in-touch", GetInTouchController.createGetInTouch);
 
 
 
