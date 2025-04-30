@@ -5,6 +5,12 @@ const sequelize = require("../../sequelize");
 const LeadsInfoModel = sequelize.define(
   "leads_info",
   {
+    name: {
+      type: Sequelize.STRING,
+    },
+    contact: {
+      type: Sequelize.STRING,
+    },
     pan: {
       type: Sequelize.STRING,
     },
@@ -14,40 +20,62 @@ const LeadsInfoModel = sequelize.define(
     loan_category: {
       type: Sequelize.STRING,
     },
-    income: {
+    age: {
       type: Sequelize.STRING,
     },
-    employment_type: {
+    income: {
       type: Sequelize.STRING,
     },
     loan_amount: {
       type: Sequelize.STRING,
     },
     loan_history: {
-      type: Sequelize.STRING,
+      type: Sequelize.STRING,   // Use TEXT because JSON.stringify can be long
+      allowNull: true,
     },
-    company_registration: {
+    company_registration_type: {
       type: Sequelize.STRING,
     },
     gst_number: {
       type: Sequelize.STRING,
     },
-    itr_years: {
+    udhyam_number: {
+      type: Sequelize.STRING,
+    },
+    itr: {
+      type: Sequelize.STRING,
+    },
+    turnover: {
+      type: Sequelize.STRING,
+    },
+    profit: {
       type: Sequelize.STRING,
     },
     incorporation_date: {
       type: Sequelize.STRING,
     },
+    property_type: {
+      type: Sequelize.STRING,
+    },
+    ownership_type: {
+      type: Sequelize.STRING,
+    },
     property_location: {
       type: Sequelize.STRING,
     },
-    property_value: {
+    estimated_value: {
       type: Sequelize.STRING,
     },
-    profession_type: {
+    employment_type: {
       type: Sequelize.STRING,
     },
-    experience_years: {
+    doctor_type: {
+      type: Sequelize.STRING,
+    },
+    // date_of_regisration: {
+    //   type: Sequelize.STRING,
+    // },
+    degree: {
       type: Sequelize.STRING,
     },
     license_number: {
@@ -69,14 +97,13 @@ const LeadsInfoModel = sequelize.define(
   }
 );
 
-// One-to-One Relationship with Leads
-// LeadsModel.hasOne(LeadsInfoModel, {
-//   foreignKey: "lead_id",
-//   onDelete: "CASCADE",
-// });
-
-// LeadsInfoModel.belongsTo(LeadsModel, {
-//   foreignKey: "lead_id",
-// });
+// const cleanPayload = (data) => {
+//   const cleaned = {};
+//   for (const key in data) {
+//     if (allowedFields.includes(key)) {
+//       cleaned[key] = data[key];
+//     }
+//   } return cleaned;
+// };
 
 module.exports = LeadsInfoModel;
