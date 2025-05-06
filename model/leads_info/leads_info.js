@@ -26,7 +26,7 @@ const LeadsInfoModel = sequelize.define(
     income: {
       type: Sequelize.STRING,
     },
-    loan_amount: {
+    amount: {
       type: Sequelize.STRING,
     },
     loan_history: {
@@ -90,6 +90,9 @@ const LeadsInfoModel = sequelize.define(
     cibil: {
       type: Sequelize.STRING,
     },
+    provider: {
+      type: Sequelize.STRING,
+    }
   },
   {
     freezeTableName: true,
