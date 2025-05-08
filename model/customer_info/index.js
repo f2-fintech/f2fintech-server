@@ -60,7 +60,7 @@ const CustomerInfoModel = sequelize.define(
     existing_liability: {
       type: Sequelize.INTEGER,
     },
-    employment: {
+    employment_type: {
       type: Sequelize.STRING,
     },
     gst_registered: {
