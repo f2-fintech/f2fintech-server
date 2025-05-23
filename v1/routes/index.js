@@ -25,7 +25,8 @@ const { checkAuthenticated } = require("../../config/passportConfig");
 const { getCibilScore } = require("../../controller/credit_score");
 const LeadsInfoController = require("../../controller/leads_info/index");
 const EligibilityBasicController = require("../../controller/eligibility_criteria/index");
-const ProductLeadsController =require("../../controller/our_products/index")
+const ProductLeadsController = require("../../controller/our_products/index")
+const ChatController = require("../../controller/chatbotController/index")
 
 const router = express.Router();
 
@@ -143,6 +144,10 @@ router.post("/create-leads-info", LeadsInfoController.createLeadsInfo);
 
 //-----------------------------------PRODUCT LEADS INFO---------------------------------------
 router.post("/create-product-leads", ProductLeadsController.createProductLeads);
+
+//-----------------------------------CHAT BOT---------------------------------------
+// router.post('/chat', ChatController.handleChat);
+router.post('/api/chat', ChatController.handleChat);
 
 
 //-----------------------------------TEST EMAIL---------------------------------------
