@@ -15,5 +15,3 @@ const ProductLeadsController = {
 };
 
 module.exports = ProductLeadsController;
-
-

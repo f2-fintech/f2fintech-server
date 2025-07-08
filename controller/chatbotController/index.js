@@ -3,6 +3,7 @@
  */
 
 const axios = require('axios');
+const { searchSimilarDocs } = require('../../utility/vector-context');
 
 /**
  * Handle chat requests by forwarding to Together AI API
@@ -13,6 +14,14 @@ exports.handleChat = async (req, res) => {
     const { message } = req.body;
     console.log('get reply from bot for: ', message)
 
+    const context = await searchSimilarDocs(message, 5)
+
+    const systemPrompt = `
+You are a helpful AI finance assistant. Use the following context extracted from a PDF to answer the user’s question.
+Only use the provided context. If the context does not contain the answer, say you don't know.
+Context: ${context}
+`;
+
     if (!message) {
         return res.status(400).json({ error: 'Please provide a message' });
     }
@@ -22,11 +31,12 @@ exports.handleChat = async (req, res) => {
             'https://api.together.xyz/v1/chat/completions',
             {
                 model: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free',
+                stream: true,
                 messages: [
-                    { role: 'user', content: message }
+                    { role: 'user', content: `${systemPrompt}\n\n question: ${message}` }
                 ],
-                temperature: 0.7,
-                max_tokens: 500
+                // temperature: 0.7,
+                // max_tokens: 500
             },
             {
                 headers: {
