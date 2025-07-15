@@ -21,9 +21,10 @@ const QueryController = require("../../controller/query");
 const QueryResponseController = require("../../controller/query_response");
 const ForgotPasswordController = require("../../controller/forgot_passsword")
 const GetInTouchController = require("../../controller/get_in_touch")
-
-
 const { checkAuthenticated } = require("../../config/passportConfig");
+const { getCibilScore } = require("../../controller/credit_score");
+const LeadsInfoController = require("../../controller/leads_info/index");
+const EligibilityBasicController = require("../../controller/eligibility_criteria/index")
 
 const router = express.Router();
 
@@ -129,6 +130,18 @@ router.put("/update-query-response", QueryResponseController.updateQueryResponse
 //-----------------------------------GET IN TOUCH---------------------------------------
 router.post("/get-in-touch", GetInTouchController.createGetInTouch);
 
+//-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
+router.post("/get-cibil-score", getCibilScore);
+router.post('/create-leads-info', EligibilityBasicController.createEligibilityBasic);
+router.put('/update-leads-info/:id', EligibilityBasicController.updateEligibilityBasic);
+router.get("/get-leads-info/:id", EligibilityBasicController.getLeadInfoById);
+
+
+
+
+
+//-----------------------------------LEADS INFO---------------------------------------
+router.post("/create-leads-info", LeadsInfoController.createLeadsInfo);
 
 
 //-----------------------------------TEST EMAIL---------------------------------------

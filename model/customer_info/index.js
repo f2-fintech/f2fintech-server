@@ -47,7 +47,7 @@ const CustomerInfoModel = sequelize.define(
       type: Sequelize.ENUM,
       values: ["current", "savings", "fixed deposit", "recurring deposit"],
     },
-    occupation_type: {
+    employment_type: {
       type: Sequelize.ENUM,
       values: ["salaried", "business", "professional"],
     },
@@ -60,7 +60,7 @@ const CustomerInfoModel = sequelize.define(
     existing_liability: {
       type: Sequelize.INTEGER,
     },
-    occupation: {
+    employment_type: {
       type: Sequelize.STRING,
     },
     gst_registered: {
