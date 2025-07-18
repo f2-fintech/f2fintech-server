@@ -24,7 +24,10 @@ const GetInTouchController = require("../../controller/get_in_touch")
 const { checkAuthenticated } = require("../../config/passportConfig");
 const { getCibilScore } = require("../../controller/credit_score");
 const LeadsInfoController = require("../../controller/leads_info/index");
-const EligibilityBasicController = require("../../controller/eligibility_criteria/index")
+const EligibilityBasicController = require("../../controller/eligibility_criteria/index");
+const ProductLeadsController = require("../../controller/our_products/index");
+const ChatController = require("../../controller/chatbotController/index");
+const ChannelPartnerController = require("../../controller/channel_partner/index");
 
 const router = express.Router();
 
@@ -137,11 +140,20 @@ router.put('/update-leads-info/:id', EligibilityBasicController.updateEligibilit
 router.get("/get-leads-info/:id", EligibilityBasicController.getLeadInfoById);
 
 
-
-
-
 //-----------------------------------LEADS INFO---------------------------------------
 router.post("/create-leads-info", LeadsInfoController.createLeadsInfo);
+
+//-----------------------------------PRODUCT LEADS INFO---------------------------------------
+router.post("/create-product-leads", ProductLeadsController.createProductLeads);
+
+
+//-----------------------------------CHANNEL PARTNER---------------------------------------
+router.post("/channel-partner", ChannelPartnerController.createChannelPartner);
+
+
+//-----------------------------------CHAT BOT---------------------------------------
+// router.post('/chat', ChatController.handleChat);
+router.post('/api/chat', ChatController.handleChat);
 
 
 //-----------------------------------TEST EMAIL---------------------------------------
