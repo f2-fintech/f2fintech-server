@@ -22,10 +22,6 @@ const CustomerModel = sequelize.define(
     email: {
       type: Sequelize.STRING
     },
-    prefix: {
-      type: Sequelize.ENUM,
-      values: ["mr", "miss", "mrs", "dr", "cs", "er"]
-    },
     contact: {
       type: Sequelize.STRING
     },
