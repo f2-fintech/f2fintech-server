@@ -32,6 +32,7 @@ const login = (req, res, next) => {
               token: Utility.getSignedToken(customer.id),
               name: customer.name,
               id: customer.id,
+              role: customer.role || "customer",
             })
           )
         );
@@ -51,6 +52,7 @@ const CustomerController = {
       payload.password = hash;
 
       // Create the customer
+      payload.role = payload.role || "customer";
       const customer = await CustomerModel.create({ ...payload });
 
       // Send the welcome email

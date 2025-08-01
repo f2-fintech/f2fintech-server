@@ -92,7 +92,14 @@ const Utility = {
       const fileLocation = `https://${bucketName}.s3.${region}.amazonaws.com/${folder}`;
 
       console.log('File uploaded successfully. File location:', fileLocation);
-      return res.status(200).send(Utility.formatResponse(200, fileLocation));
+      if (res) {
+        return res.status(200).send(
+          Utility.formatResponse(200, fileLocation)
+        );
+      }
+
+      // ✅ Otherwise return fileLocation for general usage
+      return fileLocation;
     } catch (err) {
       console.log('Error uploading file:', err);
       return res.status(500).send(

@@ -28,6 +28,7 @@ const EligibilityBasicController = require("../../controller/eligibility_criteri
 const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
+const BlogController = require("../../controller/blogs/index");
 
 const router = express.Router();
 
@@ -154,6 +155,12 @@ router.post("/channel-partner", ChannelPartnerController.createChannelPartner);
 //-----------------------------------CHAT BOT---------------------------------------
 // router.post('/chat', ChatController.handleChat);
 router.post('/api/chat', ChatController.handleChat);
+
+
+//-----------------------------------BLOGS---------------------------------------
+
+router.post("/blogs/create", BlogController.createBlog);
+router.get("/blogs", BlogController.getAllBlogs);
 
 
 //-----------------------------------TEST EMAIL---------------------------------------

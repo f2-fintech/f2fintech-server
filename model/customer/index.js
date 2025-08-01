@@ -39,6 +39,12 @@ const CustomerModel = sequelize.define(
     created_at: {
       type: "Timestamp"
     },
+    role: {
+      type: Sequelize.ENUM,
+      values: [['customer', 'marketing_agent', 'admin']],
+    }
+
+
   },
   {
     freezeTableName: true,
