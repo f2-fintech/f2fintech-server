@@ -120,6 +120,21 @@ exports.updateBlog = async (req, res) => {
         res.status(500).json({ success: false, error: "Internal server error" });
     }
 };
+exports.getBlogById = async (req, res) => {
+    try {
+        const blogId = req.params.id;
+        const blog = await Blog.findByPk(blogId);
+
+        if (!blog) {
+            return res.status(404).json({ success: false, message: "Blog not found" });
+        }
+
+        res.status(200).json({ success: true, blog });
+    } catch (error) {
+        console.error("Error fetching blog by ID:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+};
 
 
 exports.deleteBlog = async (req, res) => {
