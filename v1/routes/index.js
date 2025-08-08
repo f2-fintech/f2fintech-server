@@ -161,7 +161,8 @@ router.post('/api/chat', ChatController.handleChat);
 
 router.post("/blogs/create", BlogController.createBlog);
 router.get("/blogs", BlogController.getAllBlogs);
-
+router.put("/blogs/update/:id", BlogController.updateBlog);
+router.delete("/blogs/:id", BlogController.deleteBlog);
 
 //-----------------------------------TEST EMAIL---------------------------------------
 router.post("/send-email", QueryResponseController.sendemail);
