@@ -52,6 +52,9 @@ const LoanProviderModel = sequelize.define(
     document_required: {
       type: Sequelize.STRING,
     },
+    created_at: {
+      type: "Timestamp"
+    },
   },
   {
     freezeTableName: true,
