@@ -54,7 +54,7 @@ const CustomerApplicationController = {
     const { id } = req.params;
 
     return new Promise((resolve, reject) => {
-      CustomerLoanApplication.findOne({
+      CustomerLoanApplication.findAll({
         where: { customer_id: id },
         order: [['application_date', 'DESC']]
       })
