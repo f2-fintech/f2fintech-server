@@ -96,6 +96,10 @@ router.get(
   CustomerApplicationController.getApplicationById
 );
 router.get(
+  "/get-application-by-id-web/:id",
+  CustomerApplicationController.getApplicationByIdWeb
+);
+router.get(
   "/get-applications/:applicationId",
   CustomerApplicationController.getApplicationsByApplicationId
 );
