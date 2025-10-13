@@ -27,7 +27,7 @@ const CustomerApplication = sequelize.define(
     },
     loan_type: {
       type: Sequelize.ENUM,
-      values: ['term loan', 'personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan']
+      values: [ 'term loan', 'personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry' ]
     },
     amount: {
       type: Sequelize.DECIMAL,
