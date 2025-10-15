@@ -1,10 +1,8 @@
-
 const CustomerController = require("../controller/customer");
 const CustomerApplicationController = require("../controller/customer_application");
 const CustomerInfoController = require("../controller/customer_info");
 const LoanTrackingController = require("../controller/loan_tracking");
 
-// Random generators
 const randomNumberGenerator = () => Math.floor(100000 + Math.random() * 900000);
 const randomFourDigitNumber = () => Math.floor(1000 + Math.random() * 9000);
 
@@ -22,7 +20,7 @@ const createApplicationByAI = async (req, res) => {
             city,
             employment_type,
             salary,
-            existing_liability
+            existing_liability,
         } = req.body;
 
         if (!contact || !name || !email) {
@@ -46,7 +44,19 @@ const createApplicationByAI = async (req, res) => {
             status: "active",
         };
 
-        const createdCustomer = await CustomerController.register(customerData);
+        const createdCustomer = await new Promise((resolve, reject) => {
+            const mockReq = { body: customerData };
+            const mockRes = {
+                status: (code) => ({
+                    send: (data) => {
+                        if (code >= 200 && code < 300) resolve(data.data);
+                        else reject(new Error(data.msg || "Failed to register customer"));
+                    },
+                }),
+            };
+            CustomerController.register(mockReq, mockRes);
+        });
+
         console.log(`Customer registered with ID: ${createdCustomer.id}`);
 
         // ---------------------------
@@ -60,7 +70,20 @@ const createApplicationByAI = async (req, res) => {
             salary,
             existing_liability,
         };
-        const createdInfo = await CustomerInfoController.createCustomerInfo(customerInfoData);
+
+        const createdInfo = await new Promise((resolve, reject) => {
+            const mockReq = { body: customerInfoData };
+            const mockRes = {
+                status: (code) => ({
+                    send: (data) => {
+                        if (code >= 200 && code < 300) resolve(data.data);
+                        else reject(new Error(data.msg || "Failed to create customer info"));
+                    },
+                }),
+            };
+            CustomerInfoController.createCustomerInfo(mockReq, mockRes);
+        });
+
         console.log(`Customer info created for: ${createdCustomer.id}`);
 
         // ---------------------------
@@ -69,32 +92,56 @@ const createApplicationByAI = async (req, res) => {
         const applicationNumber = randomNumberGenerator();
         const applicationData = {
             customer_id: createdCustomer.id,
-            application_number: applicationNumber,
+            application_no: applicationNumber,
             amount,
             tenure,
             loan_type: loanType,
         };
 
-        const createdApplication = await CustomerApplicationController.createApplication(applicationData);
-        console.log(`Application created with ID: ${createdApplication.id}`);
+        const createdApplication = await new Promise((resolve, reject) => {
+            const mockReq = { body: applicationData };
+            const mockRes = {
+                status: (code) => ({
+                    send: (data) => {
+                        if (code >= 200 && code < 300) resolve(data.data);
+                        else reject(new Error(data.msg || "Failed to create application"));
+                    },
+                }),
+            };
+            CustomerApplicationController.createApplication(mockReq, mockRes);
+        });
+
+        console.log(`Application created with ID: ${createdApplication.applicationId}`);
 
         // ---------------------------
         // Loan Tracking
         // ---------------------------
         const trackingData = {
-            customer_application_id: createdApplication.id,
+            customer_application_id: createdApplication.applicationId,
             status: "submitted",
         };
 
-        const createdTracking = await LoanTrackingController.createLoanTracking(trackingData);
-        console.log(`Loan tracking created for application: ${createdApplication.id}`);
+        const createdTracking = await new Promise((resolve, reject) => {
+            const mockReq = { body: trackingData };
+            const mockRes = {
+                status: (code) => ({
+                    send: (data) => {
+                        if (code >= 200 && code < 300) resolve(data.data);
+                        else reject(new Error(data.msg || "Failed to create loan tracking"));
+                    },
+                }),
+            };
+            LoanTrackingController.createLoanTracking(mockReq, mockRes);
+        });
+
+        console.log(`Loan tracking created for application: ${createdApplication.applicationId}`);
 
         return res.status(200).json({
             success: true,
             message: "Application successfully created",
             data: {
                 customerId: createdCustomer.id,
-                applicationId: createdApplication.id,
+                applicationId: createdApplication.applicationId,
                 trackingId: createdTracking.id,
             },
         });
