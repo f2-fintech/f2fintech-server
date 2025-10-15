@@ -29,7 +29,7 @@ const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
-const { createApplicationByAI } = require("../../utility/createApplicationByAI");
+const createApplicationByAI = require("../../utility/createApplicationByAI");
 
 const router = express.Router();
 
