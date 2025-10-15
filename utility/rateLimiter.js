@@ -10,7 +10,7 @@ const rateLimit = require("express-rate-limit");
 
 const Utility = require("./index");
 
-const maxRequests = 500;
+const maxRequests = 100;
 /** Middleware to control the rate at which users can send requests to the server
  */
 
