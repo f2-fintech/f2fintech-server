@@ -29,6 +29,7 @@ const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
+const { createApplicationByAI } = require("../../utility/createApplicationByAI");
 
 const router = express.Router();
 
@@ -36,6 +37,9 @@ const router = express.Router();
 router.get("/test", (req, res) => {
   res.status(200).json({ status: 200, message: "API Working Fine." });
 });
+
+//-----------------------------------AI-APPLICATION---------------------------------------
+router.post("/customer-application-by-ai", createApplicationByAI);
 
 //-----------------------------------CUSTOMER---------------------------------------
 router.post("/create-customer", CustomerController.register);
