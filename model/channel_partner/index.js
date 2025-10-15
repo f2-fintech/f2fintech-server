@@ -9,6 +9,10 @@ const ChannelPartnerModel = sequelize.define(
             type: Sequelize.STRING,
             allowNull: true,
         },
+        category: {
+            type: Sequelize.STRING,
+            allowNull: true,
+        },
         name: {
             type: Sequelize.STRING,
             allowNull: false,
