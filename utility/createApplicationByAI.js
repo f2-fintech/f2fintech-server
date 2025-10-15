@@ -1,14 +1,14 @@
 
-import CustomerController from "../controller/customer";
-import CustomerApplicationController from "../controller/customer_application";
-import CustomerInfoController from "../controller/customer_info";
-import LoanTrackingController from "../controller/loan_tracking";
+const CustomerController = require("../controller/customer");
+const CustomerApplicationController = require("../controller/customer_application");
+const CustomerInfoController = require("../controller/customer_info");
+const LoanTrackingController = require("../controller/loan_tracking");
 
 // Random generators
 const randomNumberGenerator = () => Math.floor(100000 + Math.random() * 900000);
 const randomFourDigitNumber = () => Math.floor(1000 + Math.random() * 9000);
 
-export const createApplicationByAI = async (req, res) => {
+const createApplicationByAI = async (req, res) => {
     try {
         const {
             name,
@@ -106,3 +106,5 @@ export const createApplicationByAI = async (req, res) => {
         });
     }
 };
+
+module.exports = createApplicationByAI;
