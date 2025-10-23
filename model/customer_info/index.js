@@ -6,9 +6,9 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const Sequelize = require("sequelize");
+const Sequelize = require( "sequelize" );
 
-const sequelize = require("../../sequelize");
+const sequelize = require( "../../sequelize" );
 
 const CustomerInfoModel = sequelize.define(
   "customer_info",
@@ -45,11 +45,11 @@ const CustomerInfoModel = sequelize.define(
     },
     bank_ac_type: {
       type: Sequelize.ENUM,
-      values: ["current", "savings", "fixed deposit", "recurring deposit"],
+      values: [ "current", "savings", "fixed deposit", "recurring deposit" ],
     },
     employment_type: {
       type: Sequelize.ENUM,
-      values: ["salaried", "business", "professional"],
+      values: [ "salaried", "self_employed", "professional" ],
     },
     salary: {
       type: Sequelize.INTEGER,
