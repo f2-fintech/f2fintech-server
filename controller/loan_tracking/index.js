@@ -13,6 +13,11 @@ const LoanTrackingController = {
 
   createLoanTracking: (req, res) => {
     const payload = req.body;
+    const companyId = req.headers.companyid;
+    if ( companyId && !payload.company_id ) {
+      payload.company_id = companyId;
+    } else if ( !payload.company_id ) {
+    }
 
     return new Promise((resolve, reject) => {
       LoanTrackingModel.create(payload)
@@ -28,6 +33,11 @@ const LoanTrackingController = {
 
   getLoanTracking: (req, res) => {
     const { limit = 10, offset = 0 } = req.body;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
+    const whereClause = {};
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
 
     return new Promise((resolve, reject) => {
       LoanTrackingModel.findAndCountAll({
@@ -55,6 +65,11 @@ const LoanTrackingController = {
 
   getLoanTrackingById: (req, res) => {
     const { id } = req.params;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
+    const whereClause = { customer_application_id: id };
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
 
     return new Promise((resolve, reject) => {
       LoanTrackingModel.findOne({
@@ -83,6 +98,14 @@ const LoanTrackingController = {
    */
   updateLoanTracking: (req, res) => {
     const payload = req.body;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
+
+    // Add companyId to where clause for security
+    const whereClause = { customer_application_id: payload.customer_application_id };
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+      console.log( 'Updating loan tracking with company filter:', whereClause );
+    }
 
     return new Promise((resolve, reject) => {
       LoanTrackingModel.update(payload, { where: { customer_application_id: payload.customer_application_id } })

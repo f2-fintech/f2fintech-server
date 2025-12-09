@@ -37,6 +37,10 @@ const CustomerDocumentModel = sequelize.define(
         "audio",
       ],
     },
+    company_id: {
+      type: Sequelize.STRING,
+      allowNull: false,
+    },
   },
   {
     freezeTableName: true,

@@ -46,7 +46,15 @@ const CustomerController = {
     try {
       const payload = req.body;
       const unhashedPassword = payload.password;
+      const companyId = req.headers.companyid;
 
+      console.log( 'Extracted companyId:', companyId, "companyId>>>>>" );
+      if ( companyId ) {
+        payload.company_id = companyId;
+        console.log( 'Added company_id to payload:', payload.company_id );
+      } else {
+        console.log( 'No companyId found in headers' );
+      }
       // Hash the password
       const hash = await Utility.createHash(payload.password);
       payload.password = hash;

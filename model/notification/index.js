@@ -16,6 +16,11 @@ const NotificationModel = sequelize.define(
     customer_id: {
       type: Sequelize.INTEGER,
     },
+    company_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 42
+    },
     message: {
       type: Sequelize.STRING,
     },
