@@ -32,6 +32,10 @@ const LoanTrackingModel = sequelize.define(
     updated_at: {
       type: "Timestamp",
     },
+    company_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false
+    }
   },
   {
     freezeTableName: true,

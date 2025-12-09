@@ -13,6 +13,12 @@ const CustomerDocumentController = {
   //create document inside database
   createDocument: (req, res) => {
     const payload = req.body;
+    const companyId = req.headers.companyid;
+    if ( companyId ) {
+      payload.company_id = companyId;
+    } else {
+      console.warn( 'No companyId found in headers for createDocument' );
+    }
     return new Promise((resolve, reject) => {
       CustomerDocumentModel.create(payload)
         .then(() => {
@@ -61,7 +67,6 @@ const CustomerDocumentController = {
     try {
       const { document } = req.files;
       const { folder } = req.body;
-      console.log("folder>>>>", folder);
 
       // If no document submitted, exit
       if (!document || !folder) {

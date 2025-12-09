@@ -16,6 +16,10 @@ const CustomerApplication = sequelize.define(
     customer_id: {
       type: Sequelize.INTEGER,
     },
+    company_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     applied_by: {
       type: Sequelize.INTEGER,
     },
@@ -63,11 +67,13 @@ const CustomerApplication = sequelize.define(
     last_updated: {
       type: "Timestamp",
     },
+  
   },
   {
     freezeTableName: true,
     timestamps: false,
   }
+  
 );
 
 module.exports = CustomerApplication;

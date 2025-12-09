@@ -6,9 +6,9 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const Sequelize = require("sequelize");
+const Sequelize = require( "sequelize" );
 
-const sequelize = require("../../sequelize");
+const sequelize = require( "../../sequelize" );
 
 const CustomerModel = sequelize.define(
   "customer",
@@ -27,11 +27,11 @@ const CustomerModel = sequelize.define(
     },
     gender: {
       type: Sequelize.ENUM,
-      values: ["male", "female", "other"]
+      values: [ "male", "female", "other" ]
     },
     status: {
       type: Sequelize.ENUM,
-      values: ["active", "inactive"]
+      values: [ "active", "inactive" ]
     },
     dob: {
       type: Sequelize.DATE,
@@ -39,9 +39,13 @@ const CustomerModel = sequelize.define(
     created_at: {
       type: "Timestamp"
     },
+    company_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    },
     role: {
       type: Sequelize.ENUM,
-      values: [['customer', 'marketing_agent', 'admin']],
+      values: [ [ 'customer', 'marketing_agent', 'admin' ] ],
     }
 
 
