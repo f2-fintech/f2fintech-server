@@ -23,9 +23,6 @@ const EligibilityBasicController = {
         const id = req.params.id;
         const payload = req.body;
 
-        console.log("Updating ID:", id);
-        console.log("Payload:", payload);
-
         // 🔥 Convert loanHistory to loan_history before updating
         if (payload.loanHistory) {
             payload.loan_history = JSON.stringify(payload.loanHistory);

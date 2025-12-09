@@ -6,77 +6,101 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const CustomerLoanApplication = require("../../model/customer_application");
-const Utility = require("../../utility");
+const CustomerLoanApplication = require( "../../model/customer_application" );
+const Utility = require( "../../utility" );
 
 const CustomerApplicationController = {
-  createApplication: (req, res) => {
+  createApplication: ( req, res ) => {
     const payload = req.body;
 
-    return new Promise((resolve, reject) => {
-      CustomerLoanApplication.create(payload)
-        .then((result) => {
-          resolve(res.status(200).send(Utility.formatResponse(200, { applicationId: result.id })));
-        })
-        .catch((err) => {
-          reject(res.status(500).send(Utility.formatResponse(500, err)));
-        });
-    });
+    const companyId = req.headers.companyid;
+    if ( companyId && !payload.company_id ) {
+      payload.company_id = companyId;
+    }
+    return new Promise( ( resolve, reject ) => {
+      CustomerLoanApplication.create( payload )
+        .then( ( result ) => {
+          resolve( res.status( 200 ).send( Utility.formatResponse( 200, { applicationId: result.id } ) ) );
+        } )
+        .catch( ( err ) => {
+          reject( res.status( 500 ).send( Utility.formatResponse( 500, err ) ) );
+        } );
+    } );
   },
 
-  getApplications: (req, res) => {
+  getApplications: ( req, res ) => {
     const { offset = 0 } = req.body;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
 
-    return new Promise((resolve, reject) => {
-      CustomerLoanApplication.findAndCountAll({
-        offset: parseInt(offset),
-        order: [["application_date", "ASC"]],
-      })
-        .then((list) => {
+    const whereClause = {};
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
+
+    return new Promise( ( resolve, reject ) => {
+      CustomerLoanApplication.findAndCountAll( {
+        offset: parseInt( offset ),
+        order: [ [ "application_date", "ASC" ] ],
+      } )
+        .then( ( list ) => {
           const { count, rows } = list;
-          if (count > 0) {
-            resolve(res.status(200).send(Utility.formatResponse(200, rows)));
+          if ( count > 0 ) {
+            resolve( res.status( 200 ).send( Utility.formatResponse( 200, rows ) ) );
           } else {
             resolve(
-              res.status(404).send(Utility.formatResponse(404, `No Data Found`))
+              res.status( 404 ).send( Utility.formatResponse( 404, `No Data Found` ) )
             );
           }
-        })
-        .catch((err) => {
+        } )
+        .catch( ( err ) => {
           reject(
-            res.status(500).send(Utility.formatResponse(500, err.message))
+            res.status( 500 ).send( Utility.formatResponse( 500, err.message ) )
           );
-        });
-    });
+        } );
+    } );
   },
 
-  getApplicationById: (req, res) => {
+  getApplicationById: ( req, res ) => {
     const { id } = req.params;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
 
-    return new Promise((resolve, reject) => {
-      CustomerLoanApplication.findOne({
+    // Build where clause
+    const whereClause = { customer_id: id };
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
+
+    return new Promise( ( resolve, reject ) => {
+      CustomerLoanApplication.findOne( {
         where: { customer_id: id },
-        order: [['application_date', 'DESC']]
-      })
-        .then((data) => {
-          if (data) {
-            resolve(res.status(200).send(Utility.formatResponse(200, data)));
+        order: [ [ 'application_date', 'DESC' ] ]
+      } )
+        .then( ( data ) => {
+          if ( data ) {
+            resolve( res.status( 200 ).send( Utility.formatResponse( 200, data ) ) );
           } else {
             resolve(
-              res.status(404).send(Utility.formatResponse(404, `No Data Found`))
+              res.status( 404 ).send( Utility.formatResponse( 404, `No Data Found` ) )
             );
           }
-        })
-        .catch((err) => {
+        } )
+        .catch( ( err ) => {
           reject(
-            res.status(500).send(Utility.formatResponse(500, err.message))
+            res.status( 500 ).send( Utility.formatResponse( 500, err.message ) )
           );
-        });
-    });
+        } );
+    } );
   },
 
   getApplicationByIdWeb: ( req, res ) => {
     const { id } = req.params;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
+
+    // Build where clause
+    const whereClause = { customer_id: id };
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
 
     return new Promise( ( resolve, reject ) => {
       CustomerLoanApplication.findAll( {
@@ -100,29 +124,34 @@ const CustomerApplicationController = {
     } );
   },
 
-  getApplicationsByApplicationId: (req, res) => {
+  getApplicationsByApplicationId: ( req, res ) => {
     const { applicationId } = req.params;
+    const companyId = req.headers[ 'companyid' ] || req.headers[ 'CompanyId' ];
+    const whereClause = { id: applicationId };
+    if ( companyId ) {
+      whereClause.company_id = companyId;
+    }
 
-    return new Promise((resolve, reject) => {
-      CustomerLoanApplication.findAll({
+    return new Promise( ( resolve, reject ) => {
+      CustomerLoanApplication.findAll( {
         where: { id: applicationId },
-        order: [['application_date', 'DESC']]
-      })
-        .then((data) => {
-          if (data) {
-            resolve(res.status(200).send(Utility.formatResponse(200, data)));
+        order: [ [ 'application_date', 'DESC' ] ]
+      } )
+        .then( ( data ) => {
+          if ( data ) {
+            resolve( res.status( 200 ).send( Utility.formatResponse( 200, data ) ) );
           } else {
             resolve(
-              res.status(404).send(Utility.formatResponse(404, `No Data Found`))
+              res.status( 404 ).send( Utility.formatResponse( 404, `No Data Found` ) )
             );
           }
-        })
-        .catch((err) => {
+        } )
+        .catch( ( err ) => {
           reject(
-            res.status(500).send(Utility.formatResponse(500, err.message))
+            res.status( 500 ).send( Utility.formatResponse( 500, err.message ) )
           );
-        });
-    });
+        } );
+    } );
   }
 };
 

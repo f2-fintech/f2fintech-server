@@ -11,6 +11,12 @@ const Utility = require("../../utility");
 const NotificationController = {
   getNotifications: (req, res) => {
     const { id: userId } = req.params;
+    const companyId = req.headers.companyid;
+    if ( !companyId ) {
+      return res.status( 400 ).send(
+        Utility.formatResponse( 400, "companyId is required" )
+      );
+    }
 
     NotificationModel.findAndCountAll({
       where: { customer_id: userId },
@@ -23,7 +29,7 @@ const NotificationController = {
         const { count, rows } = list;
 
         count > 0
-          ? res.status(200).send(Utility.formatResponse(200, { count, rows }))
+          ? res.status( 200 ).send( Utility.formatResponse( 200, { count, rows, companyId }))
           : res.status(404).send(Utility.formatResponse(404, "No Data Found"));
       })
       .catch((err) => {

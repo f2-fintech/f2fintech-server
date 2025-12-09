@@ -90,6 +90,10 @@ const CustomerInfoModel = sequelize.define(
     referral_id: {
       type: Sequelize.INTEGER,
     },
+    company_id: {
+      type: Sequelize.INTEGER,
+      allowNull: false
+    }
   },
   {
     freezeTableName: true,
