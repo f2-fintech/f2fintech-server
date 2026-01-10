@@ -16,18 +16,8 @@ const LoanProviderController = {
       const limit = parseInt(req.query.limit) || 10;
       const page = parseInt(req.query.page) || 1;
       const offset = (page - 1) * limit;
-      const companyId = req.headers.companyid;
-      
-      if ( !companyId ) {
-        return res.status( 400 ).send(
-          Utility.formatResponse( 400, "Company ID is required in headers" )
-        );
-      }
 
-      console.log("Fetching loan providers with:", { limit, page, offset });
-
-      const list = await LoanProviderModel.findAndCountAll( { limit, offset, companyId });
-
+      const list = await LoanProviderModel.findAndCountAll({ limit, offset });
       if (list.count > 0) {
         res.status(200).send(
           Utility.formatResponse(200, { count: list.count, rows: list.rows, page, limit })
