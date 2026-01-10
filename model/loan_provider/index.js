@@ -6,9 +6,9 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const Sequelize = require( "sequelize" );
+const Sequelize = require("sequelize");
 
-const sequelize = require( "../../sequelize" );
+const sequelize = require("../../sequelize");
 
 const LoanProviderModel = sequelize.define(
   "loan_provider",
@@ -51,10 +51,6 @@ const LoanProviderModel = sequelize.define(
     },
     document_required: {
       type: Sequelize.STRING,
-    },
-    company_id: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
     },
     created_at: {
       type: "Timestamp"
