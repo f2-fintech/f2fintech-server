@@ -33,6 +33,10 @@ const CustomerApplication = sequelize.define(
       type: Sequelize.ENUM,
       values: [ 'personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry' ]
     },
+    lead_type: {
+      type: Sequelize.ENUM,
+      values: [ 'notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up' ]
+    },
     loan_category: {
       type: Sequelize.ENUM,
       values: [ 'secured', 'unsecured' ]
