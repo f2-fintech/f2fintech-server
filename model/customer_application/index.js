@@ -6,9 +6,9 @@
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
 
-const Sequelize = require( "sequelize" );
+const Sequelize = require("sequelize");
 
-const sequelize = require( "../../sequelize" );
+const sequelize = require("../../sequelize");
 
 const CustomerApplication = sequelize.define(
   "customer_application",
@@ -31,15 +31,15 @@ const CustomerApplication = sequelize.define(
     },
     loan_type: {
       type: Sequelize.ENUM,
-      values: [ 'personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry' ]
+      values: ['personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry']
     },
     lead_type: {
       type: Sequelize.ENUM,
-      values: [ 'notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up' ]
+      values: ['notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up']
     },
     loan_category: {
       type: Sequelize.ENUM,
-      values: [ 'secured', 'unsecured' ]
+      values: ['secured', 'unsecured']
     },
     amount: {
       type: Sequelize.DECIMAL,
@@ -71,13 +71,21 @@ const CustomerApplication = sequelize.define(
     last_updated: {
       type: "Timestamp",
     },
-  
+    has_running_loans: {
+      type: Sequelize.TINYINT,
+    },
+    which_loan: {
+      type: Sequelize.STRING,
+    },
+    running_loan_amount: {
+      type: Sequelize.DECIMAL,
+    },
+
   },
   {
     freezeTableName: true,
     timestamps: false,
   }
-  
 );
 
 module.exports = CustomerApplication;
