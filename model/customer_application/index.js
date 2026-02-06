@@ -80,6 +80,10 @@ const CustomerApplication = sequelize.define(
     running_loan_amount: {
       type: Sequelize.DECIMAL,
     },
+    case_type: {
+      type: Sequelize.ENUM,
+      values: ['top_up', 'fresh']
+    },
 
   },
   {
