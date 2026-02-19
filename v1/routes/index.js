@@ -144,13 +144,15 @@ router.post("/get-in-touch", GetInTouchController.createGetInTouch);
 
 //-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
 router.post("/get-cibil-score", getCibilScore);
-router.post('/create-leads-info', EligibilityBasicController.createEligibilityBasic);
-router.put('/update-leads-info/:id', EligibilityBasicController.updateEligibilityBasic);
-router.get("/get-leads-info/:id", EligibilityBasicController.getLeadInfoById);
+router.post('/create-leads-info-elegibility', EligibilityBasicController.createEligibilityBasic);
+router.put('/update-leads-info-elegibility/:id', EligibilityBasicController.updateEligibilityBasic);
+router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLeadInfoById);
 
 
 //-----------------------------------LEADS INFO---------------------------------------
 router.post("/create-leads-info", LeadsInfoController.createLeadsInfo);
+router.get("/get-leads-info", LeadsInfoController.getAllLeadsInfo);
+router.put("/update-leads-info/:id", LeadsInfoController.updateLeadsInfo);
 
 //-----------------------------------PRODUCT LEADS INFO---------------------------------------
 router.post("/create-product-leads", ProductLeadsController.createProductLeads);
