@@ -84,7 +84,9 @@ const CustomerApplication = sequelize.define(
       type: Sequelize.ENUM,
       values: ['top_up', 'fresh']
     },
-
+    utm_attributes: {
+      type: Sequelize.JSON,
+    },
   },
   {
     freezeTableName: true,

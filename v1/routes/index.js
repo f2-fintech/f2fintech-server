@@ -24,6 +24,7 @@ const GetInTouchController = require("../../controller/get_in_touch")
 const { checkAuthenticated } = require("../../config/passportConfig");
 const { getCibilScore } = require("../../controller/credit_score");
 const LeadsInfoController = require("../../controller/leads_info/index");
+const LeadsInfoDocumentController = require("../../controller/leads_info_document/index");
 const EligibilityBasicController = require("../../controller/eligibility_criteria/index");
 const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
@@ -153,6 +154,13 @@ router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLead
 router.post("/create-leads-info", LeadsInfoController.createLeadsInfo);
 router.get("/get-leads-info", LeadsInfoController.getAllLeadsInfo);
 router.put("/update-leads-info/:id", LeadsInfoController.updateLeadsInfo);
+
+//---------------------------------LEADS INFO DOCUMENT------------------------------------
+router.post("/create-leads-info-document", LeadsInfoDocumentController.createDocument);
+router.get(
+  "/get-leads-info-documents/:id",
+  LeadsInfoDocumentController.getDocuments
+);
 
 //-----------------------------------PRODUCT LEADS INFO---------------------------------------
 router.post("/create-product-leads", ProductLeadsController.createProductLeads);
