@@ -87,6 +87,9 @@ const CustomerApplication = sequelize.define(
     utm_attributes: {
       type: Sequelize.JSON,
     },
+    source: {
+      type: Sequelize.STRING,
+    },
   },
   {
     freezeTableName: true,
