@@ -19,8 +19,9 @@ const LoanTrackingController = require("../../controller/loan_tracking");
 const NotificationController = require("../../controller/notification");
 const QueryController = require("../../controller/query");
 const QueryResponseController = require("../../controller/query_response");
-const ForgotPasswordController = require("../../controller/forgot_passsword")
-const GetInTouchController = require("../../controller/get_in_touch")
+const ForgotPasswordController = require("../../controller/forgot_passsword");
+const GetInTouchController = require("../../controller/get_in_touch");
+const SendQueryController = require("../../controller/send_query/index");
 const { checkAuthenticated } = require("../../config/passportConfig");
 const { getCibilScore } = require("../../controller/credit_score");
 const LeadsInfoController = require("../../controller/leads_info/index");
@@ -142,6 +143,10 @@ router.put("/update-query-response", QueryResponseController.updateQueryResponse
 
 //-----------------------------------GET IN TOUCH---------------------------------------
 router.post("/get-in-touch", GetInTouchController.createGetInTouch);
+
+//-----------------------------------SEND QUERY---------------------------------------
+router.post("/send-query", SendQueryController.createSendQuery);
+router.get("/get-send-queries", SendQueryController.getSendQueries);
 
 //-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
 router.post("/get-cibil-score", getCibilScore);
