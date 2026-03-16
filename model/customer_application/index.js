@@ -31,15 +31,18 @@ const CustomerApplication = sequelize.define(
     },
     loan_type: {
       type: Sequelize.ENUM,
-      values: ['personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry']
+      values: ['personal loan', 'business loan', 'professional loan', 'home loan', 'education loan', 'lap', 'machinery loan', 'auto loan', 'just inquiry'],
+      allowNull: true
     },
     lead_type: {
       type: Sequelize.ENUM,
-      values: ['notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up']
+      values: ['notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up'],
+      allowNull: true
     },
     loan_category: {
       type: Sequelize.ENUM,
-      values: ['secured', 'unsecured']
+      values: ['secured', 'unsecured'],
+      allowNull: true
     },
     amount: {
       type: Sequelize.DECIMAL,
@@ -71,21 +74,13 @@ const CustomerApplication = sequelize.define(
     last_updated: {
       type: "Timestamp",
     },
-    has_running_loans: {
-      type: Sequelize.TINYINT,
-    },
-    which_loan: {
-      type: Sequelize.STRING,
-    },
-    running_loan_amount: {
-      type: Sequelize.DECIMAL,
-    },
-    running_emi: {
-      type: Sequelize.DECIMAL,
+    existing_loans: {
+      type: Sequelize.TEXT('long'),
     },
     case_type: {
       type: Sequelize.ENUM,
-      values: ['top_up', 'fresh']
+      values: ['top_up', 'fresh'],
+      allowNull: true
     },
     utm_attributes: {
       type: Sequelize.JSON,
