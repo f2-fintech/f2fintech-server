@@ -20,6 +20,10 @@ const CustomerApplicationController = {
     return new Promise((resolve, reject) => {
       CustomerLoanApplication.create(payload)
         .then((result) => {
+          const io = req.app.get("io");
+          if (io) {
+            io.emit("new-application", { applicationId: result.id });
+          }
           resolve(res.status(200).send(Utility.formatResponse(200, { applicationId: result.id })));
         })
         .catch((err) => {
