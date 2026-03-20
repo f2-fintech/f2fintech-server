@@ -55,6 +55,24 @@ app.use("/api/v1", v1Routes);    // Main API routes
 
 // Start server
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
+
+const http = require("http");
+const server = http.createServer(app);
+
+const { Server } = require("socket.io");
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+app.set("io", io);
+
+io.on("connection", (socket) => {
+  console.log("A client connected to WebSocket:", socket.id);
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
