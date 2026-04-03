@@ -23,7 +23,7 @@ const ForgotPasswordController = require("../../controller/forgot_passsword");
 const GetInTouchController = require("../../controller/get_in_touch");
 const SendQueryController = require("../../controller/send_query/index");
 const { checkAuthenticated } = require("../../config/passportConfig");
-const { getCibilScore } = require("../../controller/credit_score");
+const { getCibilScore, checkCibilA2Z } = require("../../controller/credit_score");
 const LeadsInfoController = require("../../controller/leads_info/index");
 const LeadsInfoDocumentController = require("../../controller/leads_info_document/index");
 const EligibilityBasicController = require("../../controller/eligibility_criteria/index");
@@ -150,6 +150,7 @@ router.get("/get-send-queries", SendQueryController.getSendQueries);
 
 //-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
 router.post("/get-cibil-score", getCibilScore);
+router.post("/check-cibil", checkCibilA2Z);
 router.post('/create-leads-info-elegibility', EligibilityBasicController.createEligibilityBasic);
 router.put('/update-leads-info-elegibility/:id', EligibilityBasicController.updateEligibilityBasic);
 router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLeadInfoById);
