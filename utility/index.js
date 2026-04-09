@@ -216,7 +216,7 @@ const Utility = {
     const payload = {
       timestamp: Math.floor(Date.now() / 1000),
       partnerId: "CORP00001277",
-      refId: refId,
+      reqid: refId,
     };
 
     const base64url = (str) => Buffer.from(str).toString('base64').replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
