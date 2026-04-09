@@ -1,5 +1,6 @@
-// controller/credit_score/index.js
-const finboxService = require("../services/finboxService"); // corrected path
+const axios = require("axios");
+const Utility = require("../../utility");
+const finboxService = require("../services/finboxService");
 
 const getCibilScore = async (req, res) => {
   const { name, pan, phone, dob } = req.body;
@@ -13,12 +14,16 @@ const getCibilScore = async (req, res) => {
   }
 };
 
-const axios = require("axios");
 
 const checkCibilA2Z = async (req, res) => {
-  const { payload, token } = req.body;
+  const { payload } = req.body;
+
+  if (!payload || !payload.refid) {
+    return res.status(400).json({ message: "Invalid payload or refid missing" });
+  }
 
   try {
+    const token = Utility.generateJWT(payload.refid);
     const response = await axios.post(
       "https://api.verifya2z.com/api/v1/verification/credit_report_checker",
       payload,

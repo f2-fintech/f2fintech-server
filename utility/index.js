@@ -10,6 +10,7 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const config = require("../config");
 
@@ -207,6 +208,27 @@ const Utility = {
         status,
         msg: res,
       };
+  },
+
+  generateJWT: (refId) => {
+    const SECRET_KEY = "UTA5U1VEQXdNREF4TWpjM1QwUm5lRTFFV1hkTlJFVjZUbEU5UFE9PQ==";
+    const header = { alg: "HS256", typ: "JWT" };
+    const payload = {
+      timestamp: Math.floor(Date.now() / 1000),
+      partnerId: "CORP00001277",
+      refId: refId,
+    };
+
+    const base64url = (str) => Buffer.from(str).toString('base64').replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+    const headerEncoded = base64url(JSON.stringify(header));
+    const payloadEncoded = base64url(JSON.stringify(payload));
+    const signingInput = `${headerEncoded}.${payloadEncoded}`;
+
+    const signature = crypto.createHmac('sha256', SECRET_KEY).update(signingInput).digest('base64');
+    const signatureEncoded = signature.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+
+    return `${signingInput}.${signatureEncoded}`;
   },
 };
 
