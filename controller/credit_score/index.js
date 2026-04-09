@@ -16,14 +16,19 @@ const getCibilScore = async (req, res) => {
 
 
 const checkCibilA2Z = async (req, res) => {
-  const { payload } = req.body;
+  // Determine payload source depending on whether it's wrapped in { payload: { ... } } or flattened
+  let payload = req.body.payload;
+  if (!payload && req.body.refid) {
+    payload = req.body;
+  }
 
   if (!payload || !payload.refid) {
     return res.status(400).json({ message: "Invalid payload or refid missing" });
   }
 
   try {
-    const token = Utility.generateJWT(payload.refid);
+    const token = await Utility.generateJWT(payload.refid);
+
     const response = await axios.post(
       "https://api.verifya2z.com/api/v1/verification/credit_report_checker",
       payload,
