@@ -27,6 +27,9 @@ const CustomerReviewModel = sequelize.define(
     review: {
       type: Sequelize.STRING,
     },
+    thumbnail: {
+      type: Sequelize.STRING,
+    },
     created_at: {
       type: 'Timestamp'
     },
