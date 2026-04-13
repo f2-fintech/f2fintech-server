@@ -45,6 +45,10 @@ const CustomerController = {
   register: async (req, res) => {
     try {
       const payload = req.body;
+      // If password is not provided (e.g. admin creation flow), generate a random one
+      if (!payload.password) {
+        payload.password = Math.random().toString(36).slice(-8);
+      }
       const unhashedPassword = payload.password;
       const companyId = req.headers.companyid;
 
@@ -86,7 +90,7 @@ const CustomerController = {
 
       // Log unexpected errors and send a generic response
       console.error("Error during registration:", err);
-      return res.status(500).send(Utility.formatResponse(500, "Internal server error."));
+      return res.status(500).send(Utility.formatResponse(500, err.message || "Internal server error."));
     }
   },
 

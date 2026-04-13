@@ -9,16 +9,17 @@
 const CustomerReviewModel = require("../../model/customer_review");
 const Utility = require("../../utility");
 const sequelize = require("../../sequelize");
+const path = require("path");
+const fs = require("fs");
 
 const CustomerReviewController = {
   getCustomerReview: (req, res) => {
-    const query = `SELECT cus.id,cus.name,cus.email,cusr.rating,cusr.review,cusr.created_at, cus_info.city, cus_info.state
+    const query = `SELECT cusr.id as review_id, cus.id,cus.name,cus.email,cusr.rating,cusr.review,cusr.thumbnail,cusr.created_at, cus_info.city, cus_info.state
                     FROM customer_review cusr
                     JOIN customer cus ON cus.id = cusr.customer_id
                     LEFT JOIN customer_info cus_info ON cus_info.customer_id = cus.id
-                    GROUP BY cusr.customer_id
                     ORDER BY cusr.created_at DESC
-                    LIMIT 5 OFFSET 0`;
+                    LIMIT 100 OFFSET 0`;
 
     return new Promise((resolve, reject) => {
       sequelize
@@ -43,17 +44,40 @@ const CustomerReviewController = {
 
   createCustomerReview: (req, res) => {
     const payload = req.body;
-    return new Promise((resolve, reject) => {
-      CustomerReviewModel.create({ ...payload })
+
+    const saveReview = (updatedPayload) => {
+      return CustomerReviewModel.create({ ...updatedPayload })
         .then((customerReview) => {
-          resolve(
-            res.status(200).send(Utility.formatResponse(200, customerReview))
-          );
+          res.status(200).send(Utility.formatResponse(200, customerReview));
         })
         .catch((err) => {
-          reject(res.status(500).send(Utility.formatResponse(500, err)));
+          res.status(500).send(Utility.formatResponse(500, err));
         });
-    });
+    };
+
+    if (req.files && req.files.thumbnail) {
+      const thumbnailFile = req.files.thumbnail;
+      const fileName = `${Date.now()}_${thumbnailFile.name.replace(/\s+/g, '_')}`;
+      const uploadDir = path.join(__dirname, "../../uploads/reviews/");
+      const uploadPath = path.join(uploadDir, fileName);
+
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      thumbnailFile.mv(uploadPath, (err) => {
+        if (err) {
+          console.error("File move error:", err);
+          return res.status(500).send(Utility.formatResponse(500, "Error saving file"));
+        }
+        console.log("File saved successfully to:", uploadPath);
+        payload.thumbnail = `/uploads/reviews/${fileName}`;
+        saveReview(payload);
+      });
+    } else {
+      console.log("No thumbnail file uploaded, using default or existing URL.");
+      saveReview(payload);
+    }
   },
 };
 

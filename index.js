@@ -7,6 +7,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
 const session = require("express-session");
+const path = require("path");
 const dotenv = require('dotenv');
 
 const config = require("./config");
@@ -39,6 +40,7 @@ app.use(bodyParser.urlencoded({
 
 app.use(cors(corsOptions));
 app.use(fileUpload({ limits: { fileSize: 20000000 }, abortOnLimit: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(rateLimiter);
 
 // Session and authentication
