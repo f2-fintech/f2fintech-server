@@ -40,6 +40,25 @@ router.get("/test", (req, res) => {
   res.status(200).json({ status: 200, message: "API Working Fine." });
 });
 
+//-----------------------------------BROCHURE PROXY---------------------------------------
+router.get("/download-brochure", (req, res) => {
+  const https = require("https");
+  const fileUrl = req.query.url;
+  if (!fileUrl || !fileUrl.startsWith('https://')) {
+    return res.status(400).send("Invalid or missing file URL.");
+  }
+
+  https.get(fileUrl, (response) => {
+    const filename = fileUrl.split('/').pop() || "download.pdf";
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Type", response.headers["content-type"] || "application/pdf");
+    response.pipe(res);
+  }).on("error", (err) => {
+    console.error("Error proxying download:", err);
+    res.status(500).send("Error downloading file.");
+  });
+});
+
 //-----------------------------------AI-APPLICATION---------------------------------------
 router.post("/customer-application-by-ai", createApplicationByAI);
 
