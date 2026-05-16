@@ -16,7 +16,7 @@ const v1Routes = require("./v1/routes");
 const { passport } = require("./config/passportConfig");
 const { connectToMysql } = require("./db");
 
-// Load environment variables
+// Load environment variables.....
 dotenv.config();
 
 const app = express();
