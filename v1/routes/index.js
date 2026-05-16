@@ -11,6 +11,7 @@ const express = require("express");
 const CustomerController = require("../../controller/customer");
 const CustomerDocumentController = require("../../controller/customer_document");
 const CustomerInfoController = require("../../controller/customer_info");
+const CustomerPartnerController = require("../../controller/customer_partner");
 const CustomerReviewController = require("../../controller/customer_review");
 const CustomerFavouriteController = require("../../controller/customer_favourite");
 const CustomerApplicationController = require("../../controller/customer_application");
@@ -102,6 +103,10 @@ router.post(
   CustomerController.updateCustomerProfile
 
 );
+
+//-----------------------------------CUSTOMER PARTNERS-----------------------------------
+router.post("/create-customer-partners", CustomerPartnerController.createPartners);
+router.get("/get-customer-partners/:customerId", CustomerPartnerController.getPartnersByCustomerId);
 
 //-----------------------------------CUSTOMER REVIEW---------------------------------------
 router.get("/get-customer-review", CustomerReviewController.getCustomerReview);
