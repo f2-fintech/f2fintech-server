@@ -60,6 +60,22 @@ app.use(passport.session());
 // Routes
 app.use("/api/v1", v1Routes);    // Main API routes
 
+// 404 catch-all for undefined API routes
+app.use("/api", (req, res) => {
+  res.status(404).json({ success: false, message: "API route not found." });
+});
+
+// Global error handler — prevents unhandled errors from causing 5xx crashes
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error("[GlobalError]", err.stack || err.message || err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal server error. Please try again later.",
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 8080;
 
@@ -82,4 +98,14 @@ io.on("connection", (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Process crash guards — prevent unhandled errors from killing the server
+// which would cause 5xx for Googlebot and hurt SEO
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException] Server will continue:", err.message || err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection] Unhandled promise rejection:", reason);
 });
