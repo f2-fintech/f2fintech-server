@@ -16,7 +16,7 @@ const v1Routes = require("./v1/routes");
 const { passport } = require("./config/passportConfig");
 const { connectToMysql } = require("./db");
 
-// Load environment variables
+// Load environment variables.....
 dotenv.config();
 
 const app = express();
@@ -27,7 +27,9 @@ const corsOptions = {
     "http://localhost:5173",
     "http://localhost:5174",
     "http://localhost:3000",
-    "http://127.0.0.1:5173"
+    "http://127.0.0.1:5173",
+    "https://f2fintech.com",
+    "https://www.f2fintech.com"
   ],
   credentials: true,
   optionSuccessStatus: 200,
@@ -58,6 +60,22 @@ app.use(passport.session());
 // Routes
 app.use("/api/v1", v1Routes);    // Main API routes
 
+// 404 catch-all for undefined API routes
+app.use("/api", (req, res) => {
+  res.status(404).json({ success: false, message: "API route not found." });
+});
+
+// Global error handler — prevents unhandled errors from causing 5xx crashes
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error("[GlobalError]", err.stack || err.message || err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: err.message || "Internal server error. Please try again later.",
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 8080;
 
@@ -80,4 +98,14 @@ io.on("connection", (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+// Process crash guards — prevent unhandled errors from killing the server
+// which would cause 5xx for Googlebot and hurt SEO
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException] Server will continue:", err.message || err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection] Unhandled promise rejection:", reason);
 });
