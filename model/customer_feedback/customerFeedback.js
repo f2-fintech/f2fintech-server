@@ -1,5 +1,5 @@
 /**
- * Copyright © 2024, F2FINTECH. ALL RIGHTS RESERVED.
+ * Copyright © 2024, F2FINTECH.... ALL RIGHTS RESERVED.
  */
 
 const Sequelize = require("sequelize");
@@ -23,7 +23,7 @@ const CustomerFeedbackModel = sequelize.define(
       type: Sequelize.INTEGER,
       allowNull: false,
     },
-    // Q3 – Areas of improvement (Multiple Choice Checkboxes, comma-separated values)
+    // Q3 -   Areas of improvement (Multiple Choice Checkboxes, comma-separated values)
     improvement_areas: {
       type: Sequelize.TEXT,
       allowNull: false,
