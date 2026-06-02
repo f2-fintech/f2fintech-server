@@ -33,6 +33,7 @@ const ChatController = require("../../controller/chatbotController/index");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
 const createApplicationByAI = require("../../utility/createApplicationByAI");
+const CustomerFeedbackController = require("../../controller/customer_feedback/index");
 
 const router = express.Router();
 
@@ -215,6 +216,11 @@ router.get("/blogs/:id", BlogController.getBlogById);
 
 //-----------------------------------TEST EMAIL---------------------------------------
 router.post("/send-email", QueryResponseController.sendemail);
+
+
+//-----------------------------------CUSTOMER FEEDBACK---------------------------------------
+router.post("/create-feedback", CustomerFeedbackController.createFeedback);
+router.get("/get-all-feedback", CustomerFeedbackController.getAllFeedback);
 
 
 module.exports = router;
