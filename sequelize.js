@@ -26,9 +26,7 @@ const sequelize = new Sequelize(
     host: config.HOST,
     port: config.DB_PORT,
     dialect: "mysql", //explicitly specifying mysql database
-    dialectOptions: {
-      useUTC: false, //for reading from the database
-    },
+    timezone: "+05:30", // Set to Indian Standard Time matching local time zone
     define: {
       freezeTableName: true,
       underscored: true,
