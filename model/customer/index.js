@@ -51,8 +51,6 @@ const CustomerModel = sequelize.define(
       type: Sequelize.STRING,
       allowNull: true,
     }
-
-
   },
   {
     freezeTableName: true,

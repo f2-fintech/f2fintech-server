@@ -83,6 +83,19 @@ const NotificationController = {
         });
     });
   },
+  
+  emitTicketNotification: (req, res) => {
+    const { notificationId, ticketId } = req.body;
+    
+    // Get socket io instance
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("ticket-status-changed", { notificationId, ticketId });
+      return res.status(200).send(Utility.formatResponse(200, "Notification emitted successfully"));
+    } else {
+      return res.status(500).send(Utility.formatResponse(500, "Socket.io not initialized"));
+    }
+  },
 };
 
 module.exports = NotificationController;
