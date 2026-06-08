@@ -88,6 +88,10 @@ const CustomerApplication = sequelize.define(
     source: {
       type: Sequelize.STRING,
     },
+    aggregator_member_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,

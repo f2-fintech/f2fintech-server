@@ -46,6 +46,10 @@ const CustomerModel = sequelize.define(
     role: {
       type: Sequelize.ENUM,
       values: [ 'customer', 'marketing_agent', 'admin' ],
+    },
+    aggregator_member_id: {
+      type: Sequelize.STRING,
+      allowNull: true,
     }
 
 
