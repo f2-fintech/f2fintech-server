@@ -154,6 +154,7 @@ router.get("/get-notifications/:id", NotificationController.getNotifications);
 router.post("/create-notification", NotificationController.createNotification);
 router.get("/mark-notification-read/:id", NotificationController.markAsRead);
 router.get("/mark-all-notifications-read/:userId", NotificationController.markAllAsRead);
+router.post("/emit-ticket-notification", NotificationController.emitTicketNotification);
 
 
 //-----------------------------------QUERY---------------------------------------

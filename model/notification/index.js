@@ -24,9 +24,29 @@ const NotificationModel = sequelize.define(
     message: {
       type: Sequelize.STRING,
     },
+    user_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    },
+    ticket_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    },
+    old_status: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    new_status: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
+    title: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
     type: {
       type: Sequelize.ENUM,
-      values: ['loan', 'query', 'general'],
+      values: ['loan', 'query', 'general', 'ticket'],
     },
     status: {
       type: Sequelize.ENUM,
