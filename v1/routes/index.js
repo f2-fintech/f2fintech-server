@@ -32,8 +32,10 @@ const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
+const SitemapController = require("../../controller/sitemap/index");
 const createApplicationByAI = require("../../utility/createApplicationByAI");
 const CustomerFeedbackController = require("../../controller/customer_feedback/index");
+const CareersController = require("../../controller/careers/index");
 
 const router = express.Router();
 
@@ -201,6 +203,9 @@ router.post("/create-product-leads", ProductLeadsController.createProductLeads);
 //-----------------------------------CHANNEL PARTNER---------------------------------------
 router.post("/channel-partner", ChannelPartnerController.createChannelPartner);
 
+//-----------------------------------CAREERS---------------------------------------
+router.post("/careers", CareersController.createCareer);
+
 
 //-----------------------------------CHAT BOT---------------------------------------
 // router.post('/chat', ChatController.handleChat);
@@ -214,6 +219,9 @@ router.get("/blogs", BlogController.getAllBlogs);
 router.put("/blogs/update/:id", BlogController.updateBlog);
 router.delete("/blogs/delete/:id", BlogController.deleteBlog);
 router.get("/blogs/:id", BlogController.getBlogById);
+
+//-----------------------------------SITEMAP---------------------------------------
+router.get("/sitemap.xml", SitemapController.getSitemap);
 
 //-----------------------------------TEST EMAIL---------------------------------------
 router.post("/send-email", QueryResponseController.sendemail);
