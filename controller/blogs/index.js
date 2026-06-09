@@ -1,6 +1,13 @@
 const Blog = require( "../../model/blogs/index" );
 const Utility = require( "../../utility" );
 
+// Sanitizes S3 path segments (such as blog titles) to avoid special characters like colons,
+// ampersands, or percents that break URL resolution in web browsers.
+function sanitizeS3KeySegment( segment ) {
+    if ( !segment ) return "";
+    return segment.trim().replace( /[^a-zA-Z0-9]/g, "_" ).replace( /_+/g, "_" );
+}
+
 /**
  * Extract base64 images from HTML content and upload to S3
  * Returns modified HTML with S3 URLs instead of base64
@@ -40,7 +47,8 @@ async function processContentImages( content, blogTitle ) {
             };
 
             // Upload to S3
-            const folder = `blogs/${ blogTitle.trim().replace( /\s+/g, "_" ) }_${ Date.now() }/content`;
+            const sanitizedTitle = sanitizeS3KeySegment( blogTitle );
+            const folder = `blogs/${ sanitizedTitle }_${ Date.now() }/content/${ imageFile.name }`;
             const imageUrl = await Utility.uploadToS3( folder, imageFile );
 
             // Replace base64 with S3 URL in content
@@ -84,7 +92,9 @@ exports.createBlog = async ( req, res ) => {
         // Handle featured image upload
         if ( req.files && req.files.imageFile ) {
             const { imageFile } = req.files;
-            const folder = `blogs/${ title.trim().replace( /\s+/g, "_" ) }_${ Date.now() }/featured`;
+            const sanitizedTitle = sanitizeS3KeySegment( title );
+            const extension = imageFile.name.split( "." ).pop() || "jpg";
+            const folder = `blogs/${ sanitizedTitle }_${ Date.now() }/featured.${ extension }`;
             imageUrl = await Utility.uploadToS3( folder, imageFile );
         }
 
@@ -191,7 +201,9 @@ exports.updateBlog = async ( req, res ) => {
         // Handle featured image upload if provided
         if ( req.files && req.files.imageFile ) {
             const { imageFile } = req.files;
-            const folder = `blogs/${ title.trim().replace( /\s+/g, "_" ) }_${ Date.now() }/featured`;
+            const sanitizedTitle = sanitizeS3KeySegment( title );
+            const extension = imageFile.name.split( "." ).pop() || "jpg";
+            const folder = `blogs/${ sanitizedTitle }_${ Date.now() }/featured.${ extension }`;
             imageUrl = await Utility.uploadToS3( folder, imageFile );
         }
 
