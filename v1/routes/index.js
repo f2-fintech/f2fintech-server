@@ -218,6 +218,7 @@ router.post("/blogs/create", BlogController.createBlog);
 router.get("/blogs", BlogController.getAllBlogs);
 router.put("/blogs/update/:id", BlogController.updateBlog);
 router.delete("/blogs/delete/:id", BlogController.deleteBlog);
+router.get("/blogs/post/:slug", BlogController.getBlogBySlug);
 router.get("/blogs/:id", BlogController.getBlogById);
 
 //-----------------------------------SITEMAP---------------------------------------

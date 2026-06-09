@@ -116,12 +116,43 @@ exports.createBlog = async ( req, res ) => {
 exports.getAllBlogs = async ( req, res ) => {
     try {
         const blogs = await Blog.findAll( {
+            attributes: { exclude: [ "content" ] },
             order: [ [ "id", "DESC" ] ],
         } );
 
         res.status( 200 ).json( { success: true, blogs } );
     } catch ( error ) {
         console.error( "Error fetching blogs:", error );
+        res.status( 500 ).json( { success: false, error: "Internal server error" } );
+    }
+};
+
+exports.getBlogBySlug = async ( req, res ) => {
+    try {
+        const { slug } = req.params;
+        if ( !slug ) {
+            return res.status( 400 ).json( { success: false, message: "Slug parameter is required" } );
+        }
+
+        const { Op } = require( "sequelize" );
+        const blog = await Blog.findOne( {
+            where: {
+                [ Op.or ]: [
+                    { route: `/blogs/${ slug }` },
+                    { route: `/${ slug }` },
+                    { route: slug },
+                    ...( isNaN( Number( slug ) ) ? [] : [ { id: Number( slug ) } ] )
+                ]
+            }
+        } );
+
+        if ( !blog ) {
+            return res.status( 404 ).json( { success: false, message: "Blog not found" } );
+        }
+
+        res.status( 200 ).json( { success: true, blog } );
+    } catch ( error ) {
+        console.error( "Error fetching blog by slug:", error );
         res.status( 500 ).json( { success: false, error: "Internal server error" } );
     }
 };
