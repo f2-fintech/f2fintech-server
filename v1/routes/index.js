@@ -36,6 +36,9 @@ const SitemapController = require("../../controller/sitemap/index");
 const createApplicationByAI = require("../../utility/createApplicationByAI");
 const CustomerFeedbackController = require("../../controller/customer_feedback/index");
 const CareersController = require("../../controller/careers/index");
+const CustomerLoanInquiryController = require("../../controller/customer_loan_inquiry/index");
+const RealtorController = require("../../controller/realtor/index");
+const DsaController = require("../../controller/dsa/index");
 
 const router = express.Router();
 
@@ -232,5 +235,18 @@ router.post("/send-email", QueryResponseController.sendemail);
 router.post("/create-feedback", CustomerFeedbackController.createFeedback);
 router.get("/get-all-feedback", CustomerFeedbackController.getAllFeedback);
 
+
+//-----------------------------------CUSTOMER LOAN INQUIRY---------------------------------------
+router.post("/create-loan-inquiry", CustomerLoanInquiryController.createInquiry);
+router.get("/get-loan-inquiries", CustomerLoanInquiryController.getAllInquiries);
+
+
+//-----------------------------------REALTOR---------------------------------------
+router.post("/realtor", RealtorController.createRealtor);
+router.get("/get-realtors", RealtorController.getAllRealtors);
+
+//-----------------------------------DSA---------------------------------------
+router.post("/dsa", DsaController.createDsa);
+router.get("/get-dsas", DsaController.getAllDsas);
 
 module.exports = router;
