@@ -122,6 +122,10 @@ router.post(
 );
 
 //-----------------------------------CUSTOMER APPLICATION-----------------------------------
+router.get(
+  "/check-duplicate-application",
+  CustomerApplicationController.checkDuplicate
+);
 router.post(
   "/create-application",
   CustomerApplicationController.createApplication
