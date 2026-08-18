@@ -51,6 +51,18 @@ const CustomerInfoModel = sequelize.define(
       type: Sequelize.ENUM,
       values: [ "salaried", "self_employed", "professional", "business" ],
     },
+    co_applicant_name: {
+      type: Sequelize.STRING,
+    },
+    co_applicant_contact: {
+      type: Sequelize.STRING,
+    },
+    co_applicant_email: {
+      type: Sequelize.STRING,
+    },
+    co_applicant_mother_name: {
+      type: Sequelize.STRING,
+    },
     salary: {
       type: Sequelize.INTEGER,
     },

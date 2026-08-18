@@ -5,6 +5,8 @@ const Utility = require("../../utility");
 const DsaController = {
     createDsa: (req, res) => {
         const payload = req.body;
+        if (!payload.gender) payload.gender = "Other";
+        if (!payload.age) payload.age = 25;
 
         return new Promise((resolve, reject) => {
             DsaModel.create(payload)
