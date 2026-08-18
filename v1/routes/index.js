@@ -103,6 +103,8 @@ router.get("/get-customer-info", CustomerInfoController.getCustomerInfo);
 router.get("/customer-info/:id", CustomerInfoController.getCustomerInfoById);
 router.patch("/customer-info-update", CustomerInfoController.updateCustomerInfo);
 router.get("/get-customer-profile/:id", CustomerController.getCustomerProfile);
+router.post("/forgot-password/send-otp", ForgotPasswordController.sendOtp);
+router.post("/forgot-password/verify-otp", ForgotPasswordController.verifyOtp);
 router.post("/reset-password", CustomerController.resetPassword);
 router.post(
   "/update-customer-profile",
