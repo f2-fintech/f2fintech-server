@@ -28,5 +28,9 @@ module.exports = {
   ACCESS_KEY: process.env.ACCESS_KEY_ID,
   SECRET_KEY: process.env.SECRET_KEY_ID,
   S3_PATHNAME: process.env.S3_PATHNAME || "https://f2fintechcustomerdoc.s3.ap-southeast-1.amazonaws.com/",
-  SENDER_EMAIL: process.env.SENDER_EMAIL || 'adusmanibi17@gmail.com'
+  SENDER_EMAIL: process.env.SENDER_EMAIL || process.env.SMTP_USER || 'adusmanibi17@gmail.com',
+  SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+  SMTP_PORT: process.env.SMTP_PORT || 587,
+  SMTP_USER: process.env.SMTP_USER || 'adusmanibi17@gmail.com',
+  SMTP_PASS: process.env.SMTP_PASS || '',
 };
