@@ -104,7 +104,7 @@ const CustomerApplicationController = {
       });
 
       if (allCustomersWithEmail.length === 0) {
-        // No customer with this email → cannot be a duplicate
+        // No customer with this email → cannot be a duplicate..
         return res.status(200).json({ status: "Success", isDuplicate: false });
       }
 
