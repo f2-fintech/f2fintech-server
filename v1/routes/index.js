@@ -39,6 +39,7 @@ const CareersController = require("../../controller/careers/index");
 const CustomerLoanInquiryController = require("../../controller/customer_loan_inquiry/index");
 const RealtorController = require("../../controller/realtor/index");
 const DsaController = require("../../controller/dsa/index");
+const CreditCardController = require("../../controller/credit_cards/index");
 
 const router = express.Router();
 
@@ -254,5 +255,15 @@ router.get("/get-realtors", RealtorController.getAllRealtors);
 //-----------------------------------DSA---------------------------------------
 router.post("/dsa", DsaController.createDsa);
 router.get("/get-dsas", DsaController.getAllDsas);
+
+//-----------------------------------CREDIT CARDS---------------------------------------
+router.get("/credit-cards", CreditCardController.getAllCards);
+router.get("/credit-cards/popular", CreditCardController.getPopularCards);
+router.get("/credit-cards/init-bundle", CreditCardController.getInitBundle);
+router.get("/credit-cards/card/:alias", CreditCardController.getCardByAlias);
+router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
+router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
+router.post("/credit-cards/track-click", CreditCardController.trackClick);
+router.post("/credit-cards/create-lead", CreditCardController.createLead);
 
 module.exports = router;
