@@ -1,5 +1,5 @@
 /**
- * Copyright © 2024, F2FINTECH. ALL RIGHTS RESERVED.
+ * Copyright © 2024-2026, F2FINTECH. ALL RIGHTS RESERVED.
  */
 
 const express = require("express");
@@ -58,7 +58,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Routes
-app.use("/api/v1", v1Routes);    // Main API routes
+app.use("/api/v1", v1Routes);    // Main API routes (including Credit Cards)
 
 // 404 catch-all for undefined API routes
 app.use("/api", (req, res) => {
