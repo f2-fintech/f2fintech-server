@@ -293,7 +293,24 @@ exports.calculateSpends = async (req, res) => {
  */
 exports.checkEligibility = async (req, res) => {
   try {
-    const data = await callBankKaroAPI("/partner/cardgenius/eligiblity", "POST", req.body);
+    const raw = req.body || {};
+    let normalizedEmpStatus = "salaried";
+    if (raw.empStatus) {
+      const lower = String(raw.empStatus).toLowerCase().replace(/[\s-]+/g, "_");
+      if (lower.includes("self") || lower.includes("business")) {
+        normalizedEmpStatus = "self_employed";
+      } else {
+        normalizedEmpStatus = "salaried";
+      }
+    }
+
+    const payload = {
+      pincode: String(raw.pincode || "").trim(),
+      inhandIncome: String(raw.inhandIncome || "0").trim(),
+      empStatus: normalizedEmpStatus,
+    };
+
+    const data = await callBankKaroAPI("/partner/cardgenius/eligiblity", "POST", payload);
     return res.status(200).json({
       status: "Success",
       message: "Eligibility checked successfully",
