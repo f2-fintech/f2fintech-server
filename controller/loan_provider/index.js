@@ -5,6 +5,7 @@
  * restricted rights software. The use, reproduction, or disclosure of this software is subject to
  * restrictions set forth in your license agreement with F2 FINTECH.
  */
+//
 const { Op } = require("sequelize");
 
 const LoanProviderModel = require("../../model/loan_provider");
@@ -13,7 +14,7 @@ const Utility = require("../../utility");
 const LoanProviderController = {
   getLoanProvider: async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit) || 10;
+      const limit = parseInt(req.query.limit) || 100;
       const page = parseInt(req.query.page) || 1;
       const offset = (page - 1) * limit;
 
