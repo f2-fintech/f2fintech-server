@@ -10,6 +10,7 @@ const { Op } = require("sequelize");
 const CustomerLoanApplication = require("../../model/customer_application");
 const Customer = require("../../model/customer");
 const Utility = require("../../utility");
+const sequelize = require("../../sequelize");
 
 const CustomerApplicationController = {
   createApplication: async (req, res) => {
@@ -158,7 +159,102 @@ const CustomerApplicationController = {
           );
         });
     });
-  }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Duplicate-application check
+  // Checks whether a mobile + PAN combination already has a loan application
+  // created within the last 30 days, scoped to the current tenant (company_id).
+  //
+  // POST /api/v1/check-duplicate-application
+  // Body: { mobile: string, pan: string }
+  // Header: companyid (required for per-tenant isolation)
+  // ─────────────────────────────────────────────────────────────────────────
+  checkDuplicateApplication: async (req, res) => {
+    try {
+      const { mobile, pan } = req.body;
+      const companyId = req.headers['companyid'] || req.headers['CompanyId'];
+
+      // --- Input validation ---
+      if (!mobile || !pan) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "mobile and pan are required"));
+      }
+
+      const normalizedMobile = String(mobile).trim();
+      const normalizedPan = String(pan).trim().toUpperCase();
+
+      if (!/^[0-9]{7,15}$/.test(normalizedMobile)) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "Invalid mobile number"));
+      }
+
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(normalizedPan)) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "Invalid PAN format"));
+      }
+
+      // --- Build query with optional per-tenant scoping ---
+      const companyFilter = companyId
+        ? `AND ca.company_id = :companyId`
+        : "";
+
+      const query = `
+        SELECT ca.application_date
+        FROM customer_application ca
+        INNER JOIN customer c ON c.id = ca.customer_id
+        INNER JOIN customer_info ci ON ci.customer_id = ca.customer_id
+        WHERE c.contact = :mobile
+          AND ci.pan = :pan
+          AND ca.application_date >= NOW() - INTERVAL 30 DAY
+          ${companyFilter}
+        ORDER BY ca.application_date DESC
+        LIMIT 1
+      `;
+
+      const replacements = { mobile: normalizedMobile, pan: normalizedPan };
+      if (companyId) replacements.companyId = companyId;
+
+      const [rows] = await sequelize.query(query, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT,
+      });
+
+      if (rows && rows.application_date) {
+        // Calculate remaining days
+        const applicationDate = new Date(rows.application_date);
+        const now = new Date();
+        const msElapsed = now - applicationDate;
+        const daysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.max(30 - daysElapsed, 1);
+
+        return res.status(200).send(
+          Utility.formatResponse(200, {
+            isDuplicate: true,
+            canCreate: false,
+            daysRemaining,
+            message: `An application with this mobile number and PAN already exists. You can create a new application after ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
+          })
+        );
+      }
+
+      // No duplicate found
+      return res.status(200).send(
+        Utility.formatResponse(200, {
+          isDuplicate: false,
+          canCreate: true,
+        })
+      );
+    } catch (err) {
+      console.error("[checkDuplicateApplication] Error:", err.message || err);
+      return res
+        .status(500)
+        .send(Utility.formatResponse(500, err.message || "Internal server error"));
+    }
+  },
 };
 
 module.exports = CustomerApplicationController;

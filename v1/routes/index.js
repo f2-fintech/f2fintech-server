@@ -142,6 +142,10 @@ router.get(
   "/get-applications/:applicationId",
   CustomerApplicationController.getApplicationsByApplicationId
 );
+router.post(
+  "/check-duplicate-application",
+  CustomerApplicationController.checkDuplicateApplication
+);
 
 //-----------------------------------LOAN PROVIDER---------------------------------------
 router.get("/get-all-loan-providers", LoanProviderController.getLoanProvider);
