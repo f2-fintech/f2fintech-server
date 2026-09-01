@@ -169,6 +169,11 @@ const CustomerApplicationController = {
   // POST /api/v1/check-duplicate-application
   // Body: { mobile: string, pan: string }
   // Header: companyid (required for per-tenant isolation)
+  //
+  // When a duplicate is found:
+  //   - Always returns application_no, loan_type, loan_category, provider, application_date
+  //   - If is_picked = 0: the application has NOT been picked up by internal team yet
+  //   - If is_picked = 1: joins with tickets table and returns ticket id + status
   // ─────────────────────────────────────────────────────────────────────────
   checkDuplicateApplication: async (req, res) => {
     try {
@@ -198,17 +203,30 @@ const CustomerApplicationController = {
       }
 
       // --- Build query with optional per-tenant scoping ---
+      // Fetches full application details + conditionally joins tickets table.
+      // LEFT JOIN ensures we always get the application row even if no ticket exists yet.
       const companyFilter = companyId
         ? `AND ca.company_id = :companyId`
         : "";
 
       const query = `
-        SELECT ca.application_date
+        SELECT
+          ca.id              AS application_id,
+          ca.application_no,
+          ca.is_picked,
+          ca.loan_type,
+          ca.loan_category,
+          ca.provider,
+          ca.application_date,
+          t.id               AS ticket_id,
+          t.status           AS ticket_status,
+          t.created_at       AS ticket_created_at
         FROM customer_application ca
-        INNER JOIN customer c ON c.id = ca.customer_id
-        INNER JOIN customer_info ci ON ci.customer_id = ca.customer_id
+        INNER JOIN customer      c  ON c.id              = ca.customer_id
+        INNER JOIN customer_info ci ON ci.customer_id    = ca.customer_id
+        LEFT  JOIN tickets       t  ON t.customer_application_id = ca.id
         WHERE c.contact = :mobile
-          AND ci.pan = :pan
+          AND ci.pan    = :pan
           AND ca.application_date >= NOW() - INTERVAL 30 DAY
           ${companyFilter}
         ORDER BY ca.application_date DESC
@@ -224,12 +242,14 @@ const CustomerApplicationController = {
       });
 
       if (rows && rows.application_date) {
-        // Calculate remaining days
+        // Calculate remaining days in the 30-day window
         const applicationDate = new Date(rows.application_date);
         const now = new Date();
         const msElapsed = now - applicationDate;
         const daysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
         const daysRemaining = Math.max(30 - daysElapsed, 1);
+
+        const isPicked = Number(rows.is_picked) === 1;
 
         return res.status(200).send(
           Utility.formatResponse(200, {
@@ -237,6 +257,24 @@ const CustomerApplicationController = {
             canCreate: false,
             daysRemaining,
             message: `An application with this mobile number and PAN already exists. You can create a new application after ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
+            // --- Application details for banner ---
+            application: {
+              id: rows.application_id,
+              application_no: rows.application_no,
+              loan_type: rows.loan_type,
+              loan_category: rows.loan_category,
+              provider: rows.provider,
+              application_date: rows.application_date,
+              is_picked: Number(rows.is_picked),
+            },
+            // --- Ticket details (only when is_picked = 1 and ticket exists) ---
+            ticket: isPicked && rows.ticket_id
+              ? {
+                  id: rows.ticket_id,
+                  status: rows.ticket_status,
+                  created_at: rows.ticket_created_at,
+                }
+              : null,
           })
         );
       }
