@@ -6,30 +6,33 @@
 * restrictions set forth in your license agreement with F2 FINTECH.
 */
 
+const { Op } = require("sequelize");
 const CustomerLoanApplication = require("../../model/customer_application");
+const Customer = require("../../model/customer");
 const Utility = require("../../utility");
+const sequelize = require("../../sequelize");
 
 const CustomerApplicationController = {
-  createApplication: (req, res) => {
+  createApplication: async (req, res) => {
     const payload = req.body;
 
     const companyId = req.headers.companyid;
     if (companyId && !payload.company_id) {
       payload.company_id = companyId;
     }
-    return new Promise((resolve, reject) => {
-      CustomerLoanApplication.create(payload)
-        .then((result) => {
-          const io = req.app.get("io");
-          if (io) {
-            io.emit("new-application", { applicationId: result.id });
-          }
-          resolve(res.status(200).send(Utility.formatResponse(200, { applicationId: result.id })));
-        })
-        .catch((err) => {
-          reject(res.status(500).send(Utility.formatResponse(500, err)));
-        });
-    });
+
+    try {
+      const result = await CustomerLoanApplication.create(payload);
+      const io = req.app.get("io");
+      if (io) {
+        io.emit("new-application", { applicationId: result.id });
+      }
+      return res.status(200).send(Utility.formatResponse(200, { applicationId: result.id }));
+
+    } catch (err) {
+      console.error("[createApplication] Error:", err.message || err);
+      return res.status(500).send(Utility.formatResponse(500, err.message || err));
+    }
   },
 
   getApplications: (req, res) => {
@@ -156,7 +159,140 @@ const CustomerApplicationController = {
           );
         });
     });
-  }
+  },
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Duplicate-application check
+  // Checks whether a mobile + PAN combination already has a loan application
+  // created within the last 30 days, scoped to the current tenant (company_id).
+  //
+  // POST /api/v1/check-duplicate-application
+  // Body: { mobile: string, pan: string }
+  // Header: companyid (required for per-tenant isolation)
+  //
+  // When a duplicate is found:
+  //   - Always returns application_no, loan_type, loan_category, provider, application_date
+  //   - If is_picked = 0: the application has NOT been picked up by internal team yet
+  //   - If is_picked = 1: joins with tickets table and returns ticket id + status
+  // ─────────────────────────────────────────────────────────────────────────
+  checkDuplicateApplication: async (req, res) => {
+    try {
+      const { mobile, pan } = req.body;
+      const companyId = req.headers['companyid'] || req.headers['CompanyId'];
+
+      // --- Input validation ---
+      if (!mobile || !pan) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "mobile and pan are required"));
+      }
+
+      const normalizedMobile = String(mobile).trim();
+      const normalizedPan = String(pan).trim().toUpperCase();
+
+      if (!/^[0-9]{7,15}$/.test(normalizedMobile)) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "Invalid mobile number"));
+      }
+
+      if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(normalizedPan)) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "Invalid PAN format"));
+      }
+
+      // --- Build query with optional per-tenant scoping ---
+      // Fetches full application details + conditionally joins tickets table.
+      // LEFT JOIN ensures we always get the application row even if no ticket exists yet.
+      const companyFilter = companyId
+        ? `AND ca.company_id = :companyId`
+        : "";
+
+      const query = `
+        SELECT
+          ca.id              AS application_id,
+          ca.application_no,
+          ca.is_picked,
+          ca.loan_type,
+          ca.loan_category,
+          ca.provider,
+          ca.application_date,
+          t.id               AS ticket_id,
+          t.status           AS ticket_status,
+          t.created_at       AS ticket_created_at
+        FROM customer_application ca
+        INNER JOIN customer      c  ON c.id              = ca.customer_id
+        INNER JOIN customer_info ci ON ci.customer_id    = ca.customer_id
+        LEFT  JOIN tickets       t  ON t.customer_application_id = ca.id
+        WHERE c.contact = :mobile
+          AND ci.pan    = :pan
+          AND ca.application_date >= NOW() - INTERVAL 30 DAY
+          ${companyFilter}
+        ORDER BY ca.application_date DESC
+        LIMIT 1
+      `;
+
+      const replacements = { mobile: normalizedMobile, pan: normalizedPan };
+      if (companyId) replacements.companyId = companyId;
+
+      const [rows] = await sequelize.query(query, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT,
+      });
+
+      if (rows && rows.application_date) {
+        // Calculate remaining days in the 30-day window
+        const applicationDate = new Date(rows.application_date);
+        const now = new Date();
+        const msElapsed = now - applicationDate;
+        const daysElapsed = Math.floor(msElapsed / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.max(30 - daysElapsed, 1);
+
+        const isPicked = Number(rows.is_picked) === 1;
+
+        return res.status(200).send(
+          Utility.formatResponse(200, {
+            isDuplicate: true,
+            canCreate: false,
+            daysRemaining,
+            message: `An application with this mobile number and PAN already exists. You can create a new application after ${daysRemaining} day${daysRemaining === 1 ? '' : 's'}.`,
+            // --- Application details for banner ---
+            application: {
+              id: rows.application_id,
+              application_no: rows.application_no,
+              loan_type: rows.loan_type,
+              loan_category: rows.loan_category,
+              provider: rows.provider,
+              application_date: rows.application_date,
+              is_picked: Number(rows.is_picked),
+            },
+            // --- Ticket details (only when is_picked = 1 and ticket exists) ---
+            ticket: isPicked && rows.ticket_id
+              ? {
+                  id: rows.ticket_id,
+                  status: rows.ticket_status,
+                  created_at: rows.ticket_created_at,
+                }
+              : null,
+          })
+        );
+      }
+
+      // No duplicate found
+      return res.status(200).send(
+        Utility.formatResponse(200, {
+          isDuplicate: false,
+          canCreate: true,
+        })
+      );
+    } catch (err) {
+      console.error("[checkDuplicateApplication] Error:", err.message || err);
+      return res
+        .status(500)
+        .send(Utility.formatResponse(500, err.message || "Internal server error"));
+    }
+  },
 };
 
 module.exports = CustomerApplicationController;

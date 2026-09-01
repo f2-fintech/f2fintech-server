@@ -91,7 +91,34 @@ const getResetPasswordEmailOptions = (payload) => {
   };
 };
 
+const getOtpEmailOptions = (email, otp, name) => {
+  return {
+    from: config.SENDER_EMAIL,
+    to: email,
+    subject: "Your OTP for F2 Fintech Password Reset",
+    html: `
+        <div style="background-color: #f9f9f9; padding: 20px;">
+          <div style="max-width: 600px; margin: auto; background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRvsW7BlfVZmbNX3uaGdcdmdVd_zsaapbNpww&s" alt="F2 Fintech Logo" style="max-width: 100px;" />
+            </div>
+            <p style="font-size: 18px; color: #2c3ce3;">Hello <b>${name}!</b></p>
+            <p style="font-size: 16px; color: #555;">You have requested to reset your password.</p>
+            <p style="font-size: 16px; color: #555;">Here is your One-Time Password (OTP):</p>
+            <p style="text-align: center; margin: 20px 0;">
+              <span style="font-size: 24px; font-weight: bold; color: #2c3ce3; letter-spacing: 5px; padding: 10px 20px; background-color: #f0f0f0; border-radius: 5px;">${otp}</span>
+            </p>
+            <p style="font-size: 14px; color: #999;">This OTP is valid for 10 minutes.</p>
+            <br />
+            <p style="font-size: 16px; color: #555;">Thanks and Regards,<br />F2 Fintech</p>
+          </div>
+        </div>
+      `,
+  };
+};
+
 module.exports = {
   getWelcomeEmailOptions,
   getResetPasswordEmailOptions,
+  getOtpEmailOptions,
 };

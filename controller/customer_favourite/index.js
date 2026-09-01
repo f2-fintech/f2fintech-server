@@ -31,6 +31,12 @@ const CustomerFavouriteController = {
   getFavourites: (req, res) => {
     const { loan_provider_id, customer_id, limit = 10, offset = 0 } = req.body;
 
+    if (!customer_id) {
+      return res
+        .status(200)
+        .send(Utility.formatResponse(200, { isFavorite: false, data: [] }));
+    }
+
     // run when loan_provider_id and customer_id are provided
     if (loan_provider_id && customer_id) {
       return new Promise((resolve, reject) => {
@@ -61,12 +67,17 @@ const CustomerFavouriteController = {
     }
 
     if (customer_id) {
+      const parsedCustomerId = parseInt(customer_id, 10);
+      const parsedLimit = parseInt(limit, 10) || 10;
+      const parsedOffset = parseInt(offset, 10) || 0;
+
       const query = `SELECT lp.id, lp.home_image, lp.is_home, lp.title, lp.interest_rate, lp.description, 
                       lp.short_description, lp.long_description,
-                      (Select COUNT(*) FROM customer_favourite) AS count
+                      (Select COUNT(*) FROM customer_favourite WHERE customer_id = ${parsedCustomerId}) AS count
                       FROM customer_favourite AS cf
                       LEFT JOIN loan_provider AS lp ON lp.id = cf.loan_provider_id
-                      LIMIT ${limit} OFFSET ${offset}`;
+                      WHERE cf.customer_id = ${parsedCustomerId}
+                      LIMIT ${parsedLimit} OFFSET ${parsedOffset}`;
 
       return new Promise((resolve, reject) => {
         sequelize
@@ -76,8 +87,8 @@ const CustomerFavouriteController = {
               ? resolve(res.status(200).send(Utility.formatResponse(200, fav)))
               : resolve(
                   res
-                    .status(404)
-                    .send(Utility.formatResponse(404, `No Data Found`))
+                    .status(200)
+                    .send(Utility.formatResponse(200, []))
                 );
           })
           .catch((err) => {
@@ -86,6 +97,10 @@ const CustomerFavouriteController = {
           });
       });
     }
+
+    return res
+      .status(200)
+      .send(Utility.formatResponse(200, { isFavorite: false, data: [] }));
   },
 
   // Remove a favourite from the database using loan_provider_id and customer_id

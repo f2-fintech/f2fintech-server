@@ -22,7 +22,7 @@ const connectToMysql = () => {
         return "Connected To Database Successfully!";
       })
       .catch((err) => {
-        throw new Error("Error Connecting To Database ", err);
+        console.log("Error Connecting To Database ", err);
       });
   }
   return db;
