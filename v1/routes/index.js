@@ -40,6 +40,8 @@ const CustomerLoanInquiryController = require("../../controller/customer_loan_in
 const RealtorController = require("../../controller/realtor/index");
 const DsaController = require("../../controller/dsa/index");
 const CreditCardController = require("../../controller/credit_cards/index");
+const CibilApplicationController = require("../../controller/cibil_application/index");
+const PaymentController = require("../../controller/payment/index");
 
 const router = express.Router();
 
@@ -261,5 +263,16 @@ router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
 router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
 router.post("/credit-cards/track-click", CreditCardController.trackClick);
 router.post("/credit-cards/create-lead", CreditCardController.createLead);
+router.get("/credit-cards/leads", CreditCardController.getAllLeads);
+
+//-----------------------------------CIBIL APPLICATIONS TRACKING---------------------------------------
+router.post("/record-cibil-application", CibilApplicationController.recordCibilApplication);
+router.get("/admin/cibil-applications", CibilApplicationController.getAllCibilApplications);
+router.get("/admin/cibil-applications/export", CibilApplicationController.exportCibilApplications);
+router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilApplicationById);
+
+//-----------------------------------PAYMENT GATEWAY (PayU)---------------------------------------
+router.post("/payment/payu/initiate", PaymentController.initiatePayuPayment);
+router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
 
 module.exports = router;
