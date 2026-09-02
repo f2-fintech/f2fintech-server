@@ -60,9 +60,9 @@ exports.initiatePayuPayment = async (req, res) => {
     // Always use the live domain for production, localhost only for test mode.
     const isProduction = PAYU_ENV === "production";
     const LIVE_DOMAIN = process.env.FRONTEND_URL || "https://f2fintech.com";
-    const clientHost = isProduction ? LIVE_DOMAIN : (req.headers.origin || "http://localhost:5173");
-    const surl = `${clientHost}/download-cibil?payment_status=success&txnid=${txnid}&ref_id=${finalRefId}`;
-    const furl = `${clientHost}/download-cibil?payment_status=failed&txnid=${txnid}&ref_id=${finalRefId}`;
+    const apiBase = isProduction ? "https://f2fintech.com/api/v1" : `${req.protocol}://${req.get("host")}/api/v1`;
+    const surl = `${apiBase}/payment/payu/response`;
+    const furl = `${apiBase}/payment/payu/response`;
 
     // Create or log initial pending record
     try {
@@ -103,6 +103,11 @@ exports.initiatePayuPayment = async (req, res) => {
         udf4,
         udf5,
         actionUrl: PAYU_PAYMENT_URL,
+        boltScriptUrl:
+          PAYU_ENV === "production"
+            ? "https://jssdk.payu.in/bolt/bolt.min.js"
+            : "https://jssdk-uat.payu.in/bolt/bolt.min.js",
+        env: PAYU_ENV,
       },
     });
   } catch (error) {
@@ -205,3 +210,58 @@ exports.verifyPayuPayment = async (req, res) => {
     });
   }
 };
+
+/**
+ * POST /api/v1/payment/payu/response
+ * Handles browser redirect POST from PayU and redirects with GET to frontend SPA
+ */
+exports.handlePayuResponse = async (req, res) => {
+  try {
+    const {
+      status,
+      txnid,
+      amount,
+      mihpayid,
+      udf1,
+      udf2,
+      udf3,
+    } = req.body;
+
+    const isProduction = PAYU_ENV === "production";
+    const LIVE_DOMAIN = process.env.FRONTEND_URL || "https://f2fintech.com";
+    const redirectBase = isProduction ? LIVE_DOMAIN : (process.env.DEV_FRONTEND_URL || "http://localhost:5173");
+
+    const isSuccess =
+      status && (status.toLowerCase() === "success" || status.toLowerCase() === "captured");
+
+    if (isSuccess && txnid) {
+      try {
+        await CibilApplicationModel.update(
+          {
+            payment_id: mihpayid || txnid,
+            payment_status: "success",
+            status: "paid",
+          },
+          {
+            where: { payment_id: txnid },
+          }
+        );
+      } catch (dbErr) {
+        console.warn("Could not update database in PayU callback:", dbErr.message);
+      }
+
+      return res.redirect(
+        `${redirectBase}/download-cibil?payment_status=success&txnid=${mihpayid || txnid}&ref_id=${udf1 || ""}`
+      );
+    } else {
+      return res.redirect(
+        `${redirectBase}/download-cibil?payment_status=failed&txnid=${txnid || ""}&ref_id=${udf1 || ""}`
+      );
+    }
+  } catch (err) {
+    console.error("[handlePayuResponse Error]:", err);
+    const redirectBase = process.env.FRONTEND_URL || "https://f2fintech.com";
+    return res.redirect(`${redirectBase}/download-cibil?payment_status=failed`);
+  }
+};
+

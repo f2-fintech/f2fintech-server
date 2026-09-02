@@ -274,5 +274,6 @@ router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilA
 //-----------------------------------PAYMENT GATEWAY (PayU)---------------------------------------
 router.post("/payment/payu/initiate", PaymentController.initiatePayuPayment);
 router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
+router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 
 module.exports = router;
