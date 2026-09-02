@@ -42,6 +42,7 @@ const DsaController = require("../../controller/dsa/index");
 const CreditCardController = require("../../controller/credit_cards/index");
 const CibilApplicationController = require("../../controller/cibil_application/index");
 const PaymentController = require("../../controller/payment/index");
+const { paymentRateLimiter } = require("../../utility/rateLimiter");
 
 const router = express.Router();
 
@@ -272,7 +273,9 @@ router.get("/admin/cibil-applications/export", CibilApplicationController.export
 router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilApplicationById);
 
 //-----------------------------------PAYMENT GATEWAY (PayU)---------------------------------------
-router.post("/payment/payu/initiate", PaymentController.initiatePayuPayment);
+// paymentRateLimiter: max 5 initiation attempts per IP per 2 minutes
+// prevents rapid retries that cause PayU Hyphen-ONE 429 errors
+router.post("/payment/payu/initiate", paymentRateLimiter, PaymentController.initiatePayuPayment);
 router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
 router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 
