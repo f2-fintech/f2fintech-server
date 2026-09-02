@@ -1,9 +1,13 @@
 const crypto = require("crypto");
 const CibilApplicationModel = require("../../model/cibil_application");
 
-const PAYU_KEY = process.env.PAYU_KEY || "xl21jd";
-const PAYU_SALT = process.env.PAYU_SALT || "BCo90vcr0O2mgQMJFPwBiz8j6mBAGw4D";
-const PAYU_ENV = process.env.PAYU_ENV || "production"; // "production" or "test"
+const PAYU_KEY = process.env.PAYU_KEY;
+const PAYU_SALT = process.env.PAYU_SALT;
+const PAYU_ENV = process.env.PAYU_ENV || "production";
+
+if (!PAYU_KEY || !PAYU_SALT) {
+  console.error("[PayU] FATAL: PAYU_KEY and PAYU_SALT must be set in .env");
+}
 
 const PAYU_PAYMENT_URL =
   PAYU_ENV === "production"
