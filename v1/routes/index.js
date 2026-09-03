@@ -192,9 +192,9 @@ router.post("/check-cibil", checkCibilA2Z);
 //-----------------------------------DIGITAP PROXY (CORS bypass for production)---------------------------------------
 router.post("/proxy-digitap", async (req, res) => {
   const axios = require("axios");
-  const DIGITAP_CLIENT_ID = "65741267";
-  const DIGITAP_SECRET = "Vjq4yaYmiN49dP9oi6sFM54OeKD0FAMi";
-  const DIGITAP_AUTH = Buffer.from(`${DIGITAP_CLIENT_ID}:${DIGITAP_SECRET}`).toString("base64");
+  const DIGITAP_AUTH = Buffer.from(
+    `${process.env.DIGITAP_CLIENT_ID}:${process.env.DIGITAP_SECRET}`
+  ).toString("base64");
   try {
     const response = await axios.post(
       "https://svc.digitap.ai/credit_analytics/request",
