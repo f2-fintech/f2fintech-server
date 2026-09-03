@@ -188,6 +188,32 @@ router.get("/get-send-queries", SendQueryController.getSendQueries);
 //-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
 router.post("/get-cibil-score", getCibilScore);
 router.post("/check-cibil", checkCibilA2Z);
+
+//-----------------------------------DIGITAP PROXY (CORS bypass for production)---------------------------------------
+router.post("/proxy-digitap", async (req, res) => {
+  const axios = require("axios");
+  const DIGITAP_AUTH = Buffer.from(
+    `${process.env.DIGITAP_CLIENT_ID}:${process.env.DIGITAP_SECRET}`
+  ).toString("base64");
+  try {
+    const response = await axios.post(
+      "https://svc.digitap.ai/credit_analytics/request",
+      req.body,
+      {
+        headers: {
+          Authorization: `Basic ${DIGITAP_AUTH}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+      }
+    );
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    const status = err?.response?.status || 500;
+    const data = err?.response?.data || { message: err.message };
+    return res.status(status).json(data);
+  }
+});
 router.post('/create-leads-info-elegibility', EligibilityBasicController.createEligibilityBasic);
 router.put('/update-leads-info-elegibility/:id', EligibilityBasicController.updateEligibilityBasic);
 router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLeadInfoById);

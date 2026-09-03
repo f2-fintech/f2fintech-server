@@ -211,11 +211,11 @@ const Utility = {
   },
 
   generateJWT: (refId) => {
-    const SECRET_KEY = "UTA5U1VEQXdNREF4TWpjM1QwUm5lRTFFV1hkTlJFVjZUbEU5UFE9PQ==";
+    const SECRET_KEY = process.env.VERIFYA2Z_JWT_SECRET;
     const header = { alg: "HS256", typ: "JWT" };
     const payload = {
       timestamp: Math.floor(Date.now() / 1000),
-      partnerId: "CORP00001277",
+      partnerId: process.env.VERIFYA2Z_PARTNER_ID || "CORP00001277",
       reqid: refId,
     };
 
