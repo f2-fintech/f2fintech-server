@@ -35,8 +35,8 @@ const checkCibilA2Z = async (req, res) => {
       {
         headers: {
           Token: token,
-          Authorisedkey: "T0RneE1EWXdNREV6TlRFME5UbERUMUpRTURBd01ERXlOemM9",
-          "User-Agent": "CORP00001277",
+          Authorisedkey: process.env.VERIFYA2Z_AUTHORISED_KEY,
+          "User-Agent": process.env.VERIFYA2Z_USER_AGENT || "CORP00001277",
           "Content-Type": "application/json",
         },
       }
