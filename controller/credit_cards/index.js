@@ -469,3 +469,64 @@ exports.createLead = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET /api/v1/credit-cards/leads
+ * Get all credit card application leads for Admin dashboard
+ */
+exports.getAllLeads = async (req, res) => {
+  try {
+    const { Op } = require("sequelize");
+    const { search, status, page = 1, limit = 50 } = req.query;
+    const whereClause = {};
+
+    if (search && search.trim()) {
+      const q = `%${search.trim()}%`;
+      whereClause[Op.or] = [
+        { full_name: { [Op.like]: q } },
+        { mobile: { [Op.like]: q } },
+        { email: { [Op.like]: q } },
+        { city: { [Op.like]: q } },
+        { pincode: { [Op.like]: q } },
+        { card_name: { [Op.like]: q } },
+        { bank_name: { [Op.like]: q } },
+      ];
+    }
+
+    if (status && status !== "all") {
+      whereClause.status = status;
+    }
+
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const { count, rows } = await CreditCardLeadModel.findAndCountAll({
+      where: whereClause,
+      order: [["created_at", "DESC"]],
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    const totalLeads = await CreditCardLeadModel.count();
+
+    return res.status(200).json({
+      status: "Success",
+      data: rows,
+      meta: {
+        total: count,
+        page: Number(page),
+        limit: Number(limit),
+      },
+      stats: {
+        totalLeads,
+      },
+    });
+  } catch (error) {
+    console.error("[getAllLeads Error]:", error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Failed to fetch credit card leads",
+      error: error.message,
+    });
+  }
+};
+

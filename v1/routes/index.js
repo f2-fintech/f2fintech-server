@@ -40,6 +40,9 @@ const CustomerLoanInquiryController = require("../../controller/customer_loan_in
 const RealtorController = require("../../controller/realtor/index");
 const DsaController = require("../../controller/dsa/index");
 const CreditCardController = require("../../controller/credit_cards/index");
+const CibilApplicationController = require("../../controller/cibil_application/index");
+const PaymentController = require("../../controller/payment/index");
+const { paymentRateLimiter } = require("../../utility/rateLimiter");
 
 const router = express.Router();
 
@@ -189,6 +192,32 @@ router.get("/get-send-queries", SendQueryController.getSendQueries);
 //-----------------------------------ELIGIBILITY CRITERIA---------------------------------------
 router.post("/get-cibil-score", getCibilScore);
 router.post("/check-cibil", checkCibilA2Z);
+
+//-----------------------------------DIGITAP PROXY (CORS bypass for production)---------------------------------------
+router.post("/proxy-digitap", async (req, res) => {
+  const axios = require("axios");
+  const DIGITAP_AUTH = Buffer.from(
+    `${process.env.DIGITAP_CLIENT_ID}:${process.env.DIGITAP_SECRET}`
+  ).toString("base64");
+  try {
+    const response = await axios.post(
+      "https://svc.digitap.ai/credit_analytics/request",
+      req.body,
+      {
+        headers: {
+          Authorization: `Basic ${DIGITAP_AUTH}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000,
+      }
+    );
+    return res.status(response.status).json(response.data);
+  } catch (err) {
+    const status = err?.response?.status || 500;
+    const data = err?.response?.data || { message: err.message };
+    return res.status(status).json(data);
+  }
+});
 router.post('/create-leads-info-elegibility', EligibilityBasicController.createEligibilityBasic);
 router.put('/update-leads-info-elegibility/:id', EligibilityBasicController.updateEligibilityBasic);
 router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLeadInfoById);
@@ -265,5 +294,19 @@ router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
 router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
 router.post("/credit-cards/track-click", CreditCardController.trackClick);
 router.post("/credit-cards/create-lead", CreditCardController.createLead);
+router.get("/credit-cards/leads", CreditCardController.getAllLeads);
+
+//-----------------------------------CIBIL APPLICATIONS TRACKING---------------------------------------
+router.post("/record-cibil-application", CibilApplicationController.recordCibilApplication);
+router.get("/admin/cibil-applications", CibilApplicationController.getAllCibilApplications);
+router.get("/admin/cibil-applications/export", CibilApplicationController.exportCibilApplications);
+router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilApplicationById);
+
+//-----------------------------------PAYMENT GATEWAY (PayU)---------------------------------------
+// paymentRateLimiter: max 5 initiation attempts per IP per 2 minutes
+// prevents rapid retries that cause PayU Hyphen-ONE 429 errors
+router.post("/payment/payu/initiate", paymentRateLimiter, PaymentController.initiatePayuPayment);
+router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
+router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 
 module.exports = router;
