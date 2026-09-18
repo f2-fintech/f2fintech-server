@@ -32,8 +32,13 @@ const CustomerDocumentModel = sequelize.define(
         'cop', 'com', 'firm card', 'cancel cheque', 'company id card', 'co-applicant aadhaar front', 'co-applicant aadhaar back', 'co-applicant pan',
         'marksheet 10', 'marksheet 12', 'graduation marksheet', 'offer letter', 'fee structure', 'entrance exam result',
         'property papers', 'seller kyc', 'allotment letter', 'title deed', 'board resolution', 'mca report', 'coi', 'ptm',
-        'tpa', 'project noc', 'lod', 'ats', 'electricity bill', 'utility bill', 'ownership proof', 'share holding pattern'
+        'tpa', 'project noc', 'lod', 'ats', 'electricity bill', 'utility bill', 'ownership proof', 'share holding pattern',
+        'letter head', 'huf deed'
       ],
+    },
+    pdf_password: {
+      type: Sequelize.STRING,
+      allowNull: true,
     },
     company_id: {
       type: Sequelize.STRING,

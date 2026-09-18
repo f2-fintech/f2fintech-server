@@ -63,6 +63,12 @@ const CustomerInfoModel = sequelize.define(
     co_applicant_mother_name: {
       type: Sequelize.STRING,
     },
+    co_applicant_relation: {
+      type: Sequelize.STRING,
+    },
+    co_applicant_employment_type: {
+      type: Sequelize.STRING,
+    },
     salary: {
       type: Sequelize.INTEGER,
     },
@@ -79,6 +85,9 @@ const CustomerInfoModel = sequelize.define(
       type: Sequelize.BOOLEAN,
     },
     company: {
+      type: Sequelize.STRING,
+    },
+    company_official_email: {
       type: Sequelize.STRING,
     },
     gst_number: {

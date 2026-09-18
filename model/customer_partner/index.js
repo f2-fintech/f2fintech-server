@@ -24,6 +24,12 @@ const CustomerPartnerModel = sequelize.define(
       type: Sequelize.ENUM,
       values: ["director", "partner"],
     },
+    name: {
+      type: Sequelize.STRING,
+    },
+    email: {
+      type: Sequelize.STRING,
+    },
     aadhaar: {
       type: Sequelize.STRING,
     },
