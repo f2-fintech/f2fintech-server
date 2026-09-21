@@ -1,5 +1,3 @@
-index
-
 /**
  * Copyright © 2024-2026, F2FINTECH. ALL RIGHTS RESERVED.
  */
