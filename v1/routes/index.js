@@ -305,7 +305,7 @@ router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilA
 //-----------------------------------PAYMENT GATEWAY (PayU)---------------------------------------
 // paymentRateLimiter: max 5 initiation attempts per IP per 2 minutes
 // prevents rapid retries that cause PayU Hyphen-ONE 429 errors
-router.post("/payment/payu/initiate", paymentRateLimiter, PaymentController.initiatePayuPayment);
+router.post("/payment/payu/initiate", PaymentController.initiatePayuPayment);
 router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
 router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 
