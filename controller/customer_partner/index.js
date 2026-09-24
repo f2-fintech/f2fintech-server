@@ -10,9 +10,9 @@ const CustomerPartnerModel = require("../../model/customer_partner");
 const Utility = require("../../utility");
 
 const CustomerPartnerController = {
-  createPartners: (req, res) => {
+  createPartners: async (req, res) => {
     const payload = req.body; // Expecting an array of partner objects
-    const companyId = req.headers.companyid;
+    const companyId = req.headers.companyid || (Array.isArray(payload) && payload[0]?.company_id);
 
     if (!companyId) {
       return res.status(400).send(Utility.formatResponse(400, "companyid header is required"));
@@ -22,21 +22,32 @@ const CustomerPartnerController = {
       return res.status(400).send(Utility.formatResponse(400, "Payload must be a non-empty array"));
     }
 
+    const customerId = payload[0]?.customer_id;
+
+    // Delete existing partners for this customer and company before creating updated list
+    if (customerId) {
+      try {
+        await CustomerPartnerModel.destroy({
+          where: { customer_id: customerId, company_id: companyId }
+        });
+      } catch (e) {
+        console.error("Error clearing existing partners:", e);
+      }
+    }
+
     // Ensure company_id is attached to every partner object
     const partners = payload.map(partner => ({
       ...partner,
       company_id: partner.company_id || companyId
     }));
 
-    return new Promise((resolve, reject) => {
-      CustomerPartnerModel.bulkCreate(partners)
-        .then((result) => {
-          resolve(res.status(200).send(Utility.formatResponse(200, result)));
-        })
-        .catch((err) => {
-          reject(res.status(500).send(Utility.formatResponse(500, err)));
-        });
-    });
+    try {
+      const result = await CustomerPartnerModel.bulkCreate(partners);
+      return res.status(200).send(Utility.formatResponse(200, result));
+    } catch (err) {
+      console.error("Error creating customer partners:", err);
+      return res.status(500).send(Utility.formatResponse(500, err.message || err));
+    }
   },
 
   getPartnersByCustomerId: (req, res) => {
