@@ -97,6 +97,10 @@ const CustomerApplication = sequelize.define(
       type: Sequelize.STRING,
       allowNull: true,
     },
+    referral_code: {
+      type: Sequelize.STRING,
+      allowNull: true,
+    },
   },
   {
     freezeTableName: true,

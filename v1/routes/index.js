@@ -42,6 +42,7 @@ const DsaController = require("../../controller/dsa/index");
 const CreditCardController = require("../../controller/credit_cards/index");
 const CibilApplicationController = require("../../controller/cibil_application/index");
 const PaymentController = require("../../controller/payment/index");
+const SecuredLoanController = require("../../controller/secured_loan_controller/index");
 const { paymentRateLimiter } = require("../../utility/rateLimiter");
 
 const router = express.Router();
@@ -308,5 +309,12 @@ router.get("/admin/cibil-applications/:id", CibilApplicationController.getCibilA
 router.post("/payment/payu/initiate", PaymentController.initiatePayuPayment);
 router.post("/payment/payu/verify", PaymentController.verifyPayuPayment);
 router.post("/payment/payu/response", PaymentController.handlePayuResponse);
+
+//-----------------------------------SECURED LOANS---------------------------------------
+// Note: No multer needed. express-fileupload is globally set up in index.js
+// and handles file parsing. Access file via req.files?.document
+router.post("/secured-loan", SecuredLoanController.submitSecuredLoan);
+router.get("/admin/secured-loans", SecuredLoanController.getSecuredLoans);
+router.get("/admin/secured-loans/:id/status", SecuredLoanController.checkLeadStatus);
 
 module.exports = router;
