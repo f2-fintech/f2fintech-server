@@ -177,7 +177,7 @@ const CustomerApplicationController = {
   // ─────────────────────────────────────────────────────────────────────────
   checkDuplicateApplication: async (req, res) => {
     try {
-      const { mobile, pan } = req.body;
+      const { mobile, pan, providers } = req.body;
       const companyId = req.headers['companyid'] || req.headers['CompanyId'];
 
       // --- Input validation ---
@@ -209,6 +209,17 @@ const CustomerApplicationController = {
         ? `AND ca.company_id = :companyId`
         : "";
 
+      let providerFilter = "";
+      const replacements = { mobile: normalizedMobile, pan: normalizedPan };
+      
+      if (providers && Array.isArray(providers) && providers.length > 0) {
+        providerFilter = "AND ca.provider IN (:providers)";
+        replacements.providers = providers;
+      } else if (providers && typeof providers === "string") {
+        providerFilter = "AND ca.provider IN (:providers)";
+        replacements.providers = [providers];
+      }
+
       const query = `
         SELECT
           ca.id              AS application_id,
@@ -229,11 +240,11 @@ const CustomerApplicationController = {
           AND ci.pan    = :pan
           AND ca.application_date >= NOW() - INTERVAL 30 DAY
           ${companyFilter}
+          ${providerFilter}
         ORDER BY ca.application_date DESC
         LIMIT 1
       `;
 
-      const replacements = { mobile: normalizedMobile, pan: normalizedPan };
       if (companyId) replacements.companyId = companyId;
 
       const [rows] = await sequelize.query(query, {
@@ -270,10 +281,10 @@ const CustomerApplicationController = {
             // --- Ticket details (only when is_picked = 1 and ticket exists) ---
             ticket: isPicked && rows.ticket_id
               ? {
-                  id: rows.ticket_id,
-                  status: rows.ticket_status,
-                  created_at: rows.ticket_created_at,
-                }
+                id: rows.ticket_id,
+                status: rows.ticket_status,
+                created_at: rows.ticket_created_at,
+              }
               : null,
           })
         );
