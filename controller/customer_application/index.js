@@ -22,6 +22,51 @@ const CustomerApplicationController = {
     }
 
     try {
+      if (payload.customer_id && payload.provider) {
+        // Fetch mobile and pan for the given customer_id
+        const customerQuery = `
+          SELECT c.contact as mobile, ci.pan 
+          FROM customer c 
+          LEFT JOIN customer_info ci ON c.id = ci.customer_id 
+          WHERE c.id = :customerId
+          LIMIT 1
+        `;
+        const [customerDetails] = await sequelize.query(customerQuery, {
+          replacements: { customerId: payload.customer_id },
+          type: sequelize.QueryTypes.SELECT
+        });
+
+        if (customerDetails && customerDetails.mobile && customerDetails.pan) {
+          // Check if this mobile+pan+provider combination already exists in the last 30 days
+          const duplicateQuery = `
+            SELECT ca.id 
+            FROM customer_application ca
+            INNER JOIN customer c ON c.id = ca.customer_id
+            INNER JOIN customer_info ci ON ci.customer_id = ca.customer_id
+            WHERE ca.provider = :provider
+              AND c.contact = :mobile
+              AND ci.pan = :pan
+              AND ca.application_date >= NOW() - INTERVAL 30 DAY
+              ${companyId ? 'AND ca.company_id = :companyId' : ''}
+            LIMIT 1
+          `;
+          
+          const [duplicateApp] = await sequelize.query(duplicateQuery, {
+            replacements: {
+              provider: payload.provider,
+              mobile: customerDetails.mobile,
+              pan: customerDetails.pan,
+              companyId: companyId || null
+            },
+            type: sequelize.QueryTypes.SELECT
+          });
+
+          if (duplicateApp) {
+            return res.status(400).send(Utility.formatResponse(400, "An application for this lender with the same phone and PAN already exists within the last 30 days."));
+          }
+        }
+      }
+
       const result = await CustomerLoanApplication.create(payload);
       const io = req.app.get("io");
       if (io) {
