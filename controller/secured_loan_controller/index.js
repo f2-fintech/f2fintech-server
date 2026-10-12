@@ -63,22 +63,24 @@ exports.submitSecuredLoan = async (req, res) => {
 
     // 2. Build and encrypt Lead Push payload
     const innerPayload = {
-      ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+      ConsumerSystemName: "F2Fintech",
       MobileNo: mobileNo,
       FirstName: firstName,
       MiddleName: middleName || "",
       LastName: lastName,
-      ZipCode: zipCode,
+      ZipCode: zipCode || "",
       Product: "HL",
       City: city || "",
-      ExpectedLoanAmount: parseFloat(expectedLoanAmount),
+      ExpectedLoanAmount: expectedLoanAmount ? String(expectedLoanAmount) : "",
       GrossSalary: grossSalary ? parseFloat(grossSalary) : 0,
       EmailID: emailId || "",
       GenerationMode: "Digital",
-      Source: "F2FINTECHPRIVATELIMITED",
-      Offer: "F2FINTECHPRIVATELIMITED",
-      Type: "F2FINTECHPRIVATELIMITED",
+      Source: "F2 FINTECH_BA",
+      Offer: "F2 FINTECH_BA",
+      Type: "F2 FINTECH_BA",
+      LeadSource: "Digital",
       LeadSubsource: "Aggregators",
+      LeadSubSubSource: "F2 FINTECH_BA",
       AadhaarNo: aadhaarNo || "",
       PANNo: panNo || "",
       ResidentialStatus: residentialStatus || "",
@@ -98,11 +100,16 @@ exports.submitSecuredLoan = async (req, res) => {
 
     // 3. Call Sammaan Lead Push API
     let leadId = null;
+    let mainApiResponse = null;
     try {
-      const mainApiResponse = await axios.post(
+      console.log("📤 Submitting Lead to Sammaan Middleware API...");
+      console.log("   UniqueID:", UniqueID);
+      console.log("   APIURL: AggregatorLeads-postAggregators");
+
+      mainApiResponse = await axios.post(
         creds.middlewareUrl,
         {
-          ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+          ConsumerSystemName: "F2Fintech",
           UniqueID,
           RequestData: encryptedData,
           APIURL: "AggregatorLeads-postAggregators",
@@ -119,9 +126,22 @@ exports.submitSecuredLoan = async (req, res) => {
         }
       );
 
+      console.log("📥 Sammaan Lead Push Raw Response:", JSON.stringify(mainApiResponse.data));
+
       if (mainApiResponse.data?.Message === "SUCCESS") {
         const parsedResponse = parseResponseData(mainApiResponse.data.ResponseData, key, iv);
-        leadId = parsedResponse.Payload?.LeadId;
+        console.log("🔓 Sammaan Decrypted Response Payload:", JSON.stringify(parsedResponse, null, 2));
+
+        leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
+        console.log("=========================================");
+        console.log("🎉 SAMMAAN CAPITAL LEAD CREATED!");
+        console.log("📌 Lead ID (Salesforce):", leadId);
+        if (parsedResponse?.Payload?.UniqueId) {
+          console.log("📌 Sammaan Salesforce Unique ID:", parsedResponse.Payload.UniqueId);
+        }
+        console.log("=========================================");
+      } else {
+        console.error("❌ Sammaan Lead Push returned non-SUCCESS message:", mainApiResponse.data);
       }
     } catch (leadErr) {
       const errMsg = leadErr?.response?.data || leadErr?.response?.status || leadErr.message;
@@ -135,9 +155,11 @@ exports.submitSecuredLoan = async (req, res) => {
 
     // 4. Sammaan Lead creation failed (non-exception, bad response)
     if (!leadId) {
+      console.error("❌ Sammaan Capital did not return a Lead ID. Response was:", mainApiResponse?.data);
       return res.status(400).json({
         status: "Error",
         message: "Sammaan Capital did not return a Lead ID. Lead not saved.",
+        detail: mainApiResponse?.data || "No LeadId in decrypted payload",
       });
     }
 
@@ -156,6 +178,8 @@ exports.submitSecuredLoan = async (req, res) => {
       status: "Success",
     });
 
+    console.log(`💾 Saved to Database -> DB ID: ${securedLoan.id}, externalLeadId: ${securedLoan.externalLeadId}`);
+
     // 6. Upload Document if provided (optional — non-blocking)
     const uploadedFile = req.files?.document;
     if (uploadedFile) {
@@ -164,7 +188,7 @@ exports.submitSecuredLoan = async (req, res) => {
         const documentExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf("."));
 
         const docPayload = {
-          ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+          ConsumerSystemName: "F2Fintech",
           UniqueId: UniqueID,
           LeadNo: leadId,
           DocumentType: "Aadhaar",
@@ -184,7 +208,7 @@ exports.submitSecuredLoan = async (req, res) => {
         const docUploadResponse = await axios.post(
           creds.middlewareUrl,
           {
-            ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+            ConsumerSystemName: "F2Fintech",
             UniqueID,
             RequestData: encryptedDocData,
             APIURL: "DocUploadLeadJourneyModule-postUploaddoc",
@@ -207,6 +231,7 @@ exports.submitSecuredLoan = async (req, res) => {
             securedLoan.documentUploaded = true;
             securedLoan.documentId = docParsed.Payload?.DocumentId;
             await securedLoan.save();
+            console.log(`📄 Document uploaded successfully. Doc ID: ${securedLoan.documentId}`);
           }
         }
       } catch (docErr) {
@@ -214,7 +239,13 @@ exports.submitSecuredLoan = async (req, res) => {
       }
     }
 
-    return res.status(200).json({ status: "Success", data: securedLoan });
+    return res.status(200).json({
+      status: "Success",
+      message: "Lead created successfully in Sammaan Capital",
+      leadId: leadId,
+      externalLeadId: leadId,
+      data: securedLoan,
+    });
 
   } catch (error) {
     console.error("Error in submitSecuredLoan:", error?.response?.data || error);
@@ -243,7 +274,7 @@ exports.checkLeadStatus = async (req, res) => {
     const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
 
     const statusPayload = {
-      ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+      ConsumerSystemName: "F2Fintech",
       UniqueId: UniqueID,
       LeadNo: loan.externalLeadId,
       Filler1: "", Filler2: "",
@@ -255,7 +286,7 @@ exports.checkLeadStatus = async (req, res) => {
     const statusResponse = await axios.post(
       creds.middlewareUrl,
       {
-        ConsumerSystemName: "F2FINTECHPRIVATELIMITED",
+        ConsumerSystemName: "F2Fintech",
         UniqueID,
         RequestData: encryptedData,
         APIURL: "NewLeadModuleAPI-postReversestatuscheck",
