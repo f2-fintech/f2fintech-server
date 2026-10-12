@@ -18,7 +18,7 @@ async function getTokenAndUniqueId(creds) {
   const messageId = uuidv4().replace(/-/g, "");
   const uniqueIdResponse = await axios.post(
     creds.generateUniqueIdUrl,
-    { ConsumerSystemName: "F2FINTECHPRIVATELIMITED" },
+    { ConsumerSystemName: "F2Fintech" },
     {
       headers: {
         MessageId: messageId,
@@ -29,6 +29,7 @@ async function getTokenAndUniqueId(creds) {
       },
     }
   );
+  console.log("this is the main concept of things", uniqueIdResponse.data.Payload)
   const { UniqueID, key, iv } = uniqueIdResponse.data.Payload;
   return { token, UniqueID, key, iv };
 }
@@ -52,7 +53,7 @@ exports.submitSecuredLoan = async (req, res) => {
       ({ token, UniqueID, key, iv } = await getTokenAndUniqueId(creds));
     } catch (apiErr) {
       const errMsg = apiErr?.response?.data || apiErr?.response?.status || apiErr.message;
-      console.error("❌ Sammaan Auth/UniqueID API failed:", errMsg);
+      console.error("❌ Sammaan Auth/UniqueID API failed:", errMsg, apiErr);
       return res.status(502).json({
         status: "Error",
         message: "Sammaan Capital API unreachable. Please try again later.",
