@@ -265,7 +265,11 @@ exports.getSecuredLoans = async (req, res) => {
 
 exports.checkLeadStatus = async (req, res) => {
   try {
-    const loan = await SecuredLoan.findByPk(req.params.id);
+    const { id } = req.params;
+    const loan = isNaN(id)
+      ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
+      : await SecuredLoan.findByPk(id);
+
     if (!loan || !loan.externalLeadId) {
       return res.status(404).json({ status: "Error", message: "Lead not found or external LeadId missing." });
     }
@@ -305,20 +309,32 @@ exports.checkLeadStatus = async (req, res) => {
 
     if (statusResponse.data && statusResponse.data.Message === "SUCCESS") {
       const parsedResponse = parseResponseData(statusResponse.data.ResponseData, key, iv);
-      const payload = parsedResponse.Payload;
+      console.log("🔓 Sammaan Decrypted Status Response:", JSON.stringify(parsedResponse, null, 2));
+
+      const payload = parsedResponse?.Payload;
       if (payload && payload.LeadNo) {
         loan.currentStatus = payload.Status || payload.Current_Status;
         loan.sanctionAmount = payload.Sanction_Amount || null;
         loan.disbursalAmount = payload.Disbursal_Amount || null;
         loan.rejectReason = payload.Reject_Reason || null;
         await loan.save();
-        return res.status(200).json({ status: "Success", data: loan });
+
+        return res.status(200).json({
+          status: "Success",
+          message: "Status fetched live from Sammaan Capital",
+          sammaanLiveResponse: payload,
+          data: loan,
+        });
       }
     }
 
-    return res.status(400).json({ status: "Error", message: "Failed to fetch status from Sammaan Capital" });
+    return res.status(400).json({
+      status: "Error",
+      message: "Failed to fetch status from Sammaan Capital",
+      rawResponse: statusResponse.data,
+    });
   } catch (err) {
     console.error("Error in checkLeadStatus:", err?.response?.data || err);
-    return res.status(500).json({ status: "Error", message: err.message });
+    return res.status(500).json({ status: "Error", message: err.message, detail: err?.response?.data });
   }
 };
