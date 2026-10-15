@@ -133,11 +133,12 @@ exports.submitSecuredLoan = async (req, res) => {
         console.log("🔓 Sammaan Decrypted Response Payload:", JSON.stringify(parsedResponse, null, 2));
 
         leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
+        var salesforceUniqueId = parsedResponse?.Payload?.UniqueId || null;
         console.log("=========================================");
         console.log("🎉 SAMMAAN CAPITAL LEAD CREATED!");
         console.log("📌 Lead ID (Salesforce):", leadId);
-        if (parsedResponse?.Payload?.UniqueId) {
-          console.log("📌 Sammaan Salesforce Unique ID:", parsedResponse.Payload.UniqueId);
+        if (salesforceUniqueId) {
+          console.log("📌 Sammaan Salesforce Unique ID:", salesforceUniqueId);
         }
         console.log("=========================================");
       } else {
@@ -175,6 +176,7 @@ exports.submitSecuredLoan = async (req, res) => {
       zipCode, city,
       product: "HL",
       externalLeadId: leadId,
+      salesforceUniqueId: salesforceUniqueId || null,
       status: "Success",
     });
 
@@ -189,7 +191,7 @@ exports.submitSecuredLoan = async (req, res) => {
 
         const docPayload = {
           ConsumerSystemName: "F2Fintech",
-          UniqueId: UniqueID,
+          UniqueId: salesforceUniqueId || UniqueID,
           LeadNo: leadId,
           DocumentType: "Aadhaar",
           DocumentSubtype: "Aadhaar KYC",
@@ -227,12 +229,19 @@ exports.submitSecuredLoan = async (req, res) => {
 
         if (docUploadResponse.data?.Message === "SUCCESS") {
           const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
-          if (docParsed.Payload?.status === "Success" || docParsed.Payload?.status === "SUCCESS") {
+          console.log("🔓 Sammaan Decrypted Doc Upload Response in submitLead:", JSON.stringify(docParsed, null, 2));
+          const docPayloadRes = docParsed?.Payload;
+          const isSuccess = docPayloadRes?.status?.toLowerCase() === "success" || !!docPayloadRes?.DocumentId;
+          if (isSuccess) {
             securedLoan.documentUploaded = true;
-            securedLoan.documentId = docParsed.Payload?.DocumentId;
+            securedLoan.documentId = docPayloadRes?.DocumentId || null;
             await securedLoan.save();
             console.log(`📄 Document uploaded successfully. Doc ID: ${securedLoan.documentId}`);
+          } else {
+            console.warn("⚠️ Sammaan Doc Upload returned unexpected payload:", docPayloadRes);
           }
+        } else {
+          console.error("❌ Sammaan Doc Upload raw error:", docUploadResponse.data);
         }
       } catch (docErr) {
         console.error("⚠️ Document upload failed (non-fatal):", docErr?.response?.data || docErr.message);
@@ -338,3 +347,120 @@ exports.checkLeadStatus = async (req, res) => {
     return res.status(500).json({ status: "Error", message: err.message, detail: err?.response?.data });
   }
 };
+
+exports.uploadSecuredLoanDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const loan = isNaN(id)
+      ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
+      : await SecuredLoan.findByPk(id);
+
+    if (!loan || !loan.externalLeadId) {
+      return res.status(404).json({
+        status: "Error",
+        message: "Lead not found or external LeadId missing.",
+      });
+    }
+
+    const uploadedFile = req.files?.document;
+    if (!uploadedFile) {
+      return res.status(400).json({
+        status: "Error",
+        message: "No document attached. Please upload a file with key 'document'.",
+      });
+    }
+
+    const {
+      documentType = "Aadhaar",
+      documentSubtype = "Aadhaar KYC",
+    } = req.body;
+
+    const documentBase64 = uploadedFile.data.toString("base64");
+    const documentExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf("."));
+
+    const creds = getSammaanCreds();
+    const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
+
+    const docPayload = {
+      ConsumerSystemName: "F2Fintech",
+      UniqueId: loan.salesforceUniqueId || UniqueID,
+      LeadNo: loan.externalLeadId,
+      DocumentType: documentType,
+      DocumentSubtype: documentSubtype,
+      DocumentName: uploadedFile.name,
+      VersionData: documentBase64,
+      DocumentExtention: documentExtension,
+      MimeType: uploadedFile.mimetype,
+      DocumentData: documentBase64,
+      Filler1: "", Filler2: "", Filler3: "", Filler4: "", Filler5: "",
+      Filler6: "", Filler7: "", Filler8: "", Filler9: "", Filler10: "",
+    };
+
+    const encryptedDocData = prepareRequestData(docPayload, key, iv);
+    const messageId = uuidv4().replace(/-/g, "");
+
+    const docUploadResponse = await axios.post(
+      creds.middlewareUrl,
+      {
+        ConsumerSystemName: "F2Fintech",
+        UniqueID,
+        RequestData: encryptedDocData,
+        APIURL: "DocUploadLeadJourneyModule-postUploaddoc",
+        ExistingAPIMethod: "POST",
+      },
+      {
+        headers: {
+          MessageId: messageId,
+          Sourceapplicationname: "MiddlewareEncryptDataAPI",
+          Servicename: "AggregatorLeadsAPI",
+          apikey: creds.apikey,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("📥 Sammaan Doc Upload Raw Response:", JSON.stringify(docUploadResponse.data));
+
+    if (docUploadResponse.data?.Message === "SUCCESS") {
+      const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
+      console.log("🔓 Sammaan Decrypted Doc Upload Response:", JSON.stringify(docParsed, null, 2));
+
+      const payload = docParsed?.Payload;
+      const isSuccess = payload?.status?.toLowerCase() === "success";
+
+      if (isSuccess || payload?.DocumentId) {
+        loan.documentUploaded = true;
+        loan.documentId = payload?.DocumentId || loan.documentId;
+        await loan.save();
+
+        return res.status(200).json({
+          status: "Success",
+          message: payload?.message || "Document uploaded successfully to Sammaan Capital",
+          documentId: loan.documentId,
+          sammaanLiveResponse: payload,
+          data: loan,
+        });
+      }
+
+      return res.status(400).json({
+        status: "Error",
+        message: payload?.message || "Sammaan returned failure for document upload",
+        sammaanLiveResponse: payload,
+      });
+    }
+
+    return res.status(400).json({
+      status: "Error",
+      message: "Failed to upload document to Sammaan Capital",
+      rawResponse: docUploadResponse.data,
+    });
+  } catch (error) {
+    console.error("Error in uploadSecuredLoanDocument:", error?.response?.data || error);
+    return res.status(500).json({
+      status: "Error",
+      message: error.message,
+      detail: error?.response?.data,
+    });
+  }
+};
+
