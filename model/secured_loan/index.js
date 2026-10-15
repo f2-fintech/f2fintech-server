@@ -34,6 +34,7 @@ const SecuredLoan = sequelize.define(
 
         // --- External API Fields ---
         externalLeadId: { type: Sequelize.STRING, allowNull: true },
+        salesforceUniqueId: { type: Sequelize.STRING, allowNull: true },
         status: { type: Sequelize.STRING, defaultValue: "Pending" },
         documentUploaded: { type: Sequelize.BOOLEAN, defaultValue: false },
         documentId: { type: Sequelize.STRING, allowNull: true },
