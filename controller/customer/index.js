@@ -48,14 +48,22 @@ const CustomerController = {
 
       const normalizedContact = payload.contact ? String(payload.contact).trim() : null;
       const normalizedEmail = payload.email ? String(payload.email).trim().toLowerCase() : null;
+      const companyId = req.headers['companyid'] || req.headers['CompanyId'] || payload.company_id;
 
-      // Check if customer already exists with BOTH matching contact and email
+      if (companyId) {
+        payload.company_id = companyId;
+      }
+
+      // Check if customer already exists with matching contact, email & company_id (multi-tenant)
       if (normalizedContact && normalizedEmail) {
+        const whereClause = {
+          contact: normalizedContact,
+          email: normalizedEmail,
+          company_id: companyId
+        };
+
         const existingCustomer = await CustomerModel.findOne({
-          where: {
-            contact: normalizedContact,
-            email: normalizedEmail,
-          },
+          where: whereClause,
         });
 
         if (existingCustomer) {
@@ -76,14 +84,12 @@ const CustomerController = {
         payload.password = Math.random().toString(36).slice(-8);
       }
       const unhashedPassword = payload.password;
-      const companyId = req.headers.companyid;
 
-      console.log( 'Extracted companyId:', companyId, "companyId>>>>>" );
-      if ( companyId ) {
-        payload.company_id = companyId;
-        console.log( 'Added company_id to payload:', payload.company_id );
+      console.log('Extracted companyId:', companyId, "companyId>>>>>");
+      if (companyId) {
+        console.log('Added company_id to payload:', payload.company_id);
       } else {
-        console.log( 'No companyId found in headers' );
+        console.log('No companyId found in headers or payload');
       }
       // Hash the password
       const hash = await Utility.createHash(payload.password);
@@ -110,11 +116,17 @@ const CustomerController = {
       // Handle unique contact violation
       if (err.parent?.code === 'ER_DUP_ENTRY') {
         const normalizedContact = req.body?.contact ? String(req.body.contact).trim() : null;
+        const companyId = req.headers['companyid'] || req.headers['CompanyId'] || req.body?.company_id;
         if (normalizedContact) {
           try {
-            const duplicateCustomer = await CustomerModel.findOne({
-              where: { contact: normalizedContact },
-            });
+            const whereClause = { contact: normalizedContact };
+            if (companyId) {
+              whereClause.company_id = companyId;
+            }
+            let duplicateCustomer = await CustomerModel.findOne({ where: whereClause });
+            if (!duplicateCustomer) {
+              duplicateCustomer = await CustomerModel.findOne({ where: { contact: normalizedContact } });
+            }
             if (duplicateCustomer) {
               const token = Utility.getSignedToken(duplicateCustomer.id);
               return res.status(200).send(
