@@ -45,6 +45,32 @@ const CustomerController = {
   register: async (req, res) => {
     try {
       const payload = req.body;
+
+      const normalizedContact = payload.contact ? String(payload.contact).trim() : null;
+      const normalizedEmail = payload.email ? String(payload.email).trim().toLowerCase() : null;
+
+      // Check if customer already exists with BOTH matching contact and email
+      if (normalizedContact && normalizedEmail) {
+        const existingCustomer = await CustomerModel.findOne({
+          where: {
+            contact: normalizedContact,
+            email: normalizedEmail,
+          },
+        });
+
+        if (existingCustomer) {
+          const token = Utility.getSignedToken(existingCustomer.id);
+          return res.status(200).send(
+            Utility.formatResponse(200, {
+              token,
+              id: existingCustomer.id,
+              name: existingCustomer.name,
+              isExisting: true,
+            })
+          );
+        }
+      }
+
       // If password is not provided (e.g. admin creation flow), generate a random one
       if (!payload.password) {
         payload.password = Math.random().toString(36).slice(-8);
@@ -82,7 +108,28 @@ const CustomerController = {
         .send(Utility.formatResponse(200, { token, id: customer.id, name: customer.name }));
     } catch (err) {
       // Handle unique contact violation
-      if (err.parent?.code === 'ER_DUP_ENTRY') { // Adjust error code based on your database
+      if (err.parent?.code === 'ER_DUP_ENTRY') {
+        const normalizedContact = req.body?.contact ? String(req.body.contact).trim() : null;
+        if (normalizedContact) {
+          try {
+            const duplicateCustomer = await CustomerModel.findOne({
+              where: { contact: normalizedContact },
+            });
+            if (duplicateCustomer) {
+              const token = Utility.getSignedToken(duplicateCustomer.id);
+              return res.status(200).send(
+                Utility.formatResponse(200, {
+                  token,
+                  id: duplicateCustomer.id,
+                  name: duplicateCustomer.name,
+                  isExisting: true,
+                })
+              );
+            }
+          } catch (e) {
+            console.error("Error looking up duplicate customer:", e);
+          }
+        }
         return res
           .status(400)
           .send(Utility.formatResponse(400, err.parent?.sqlMessage));
