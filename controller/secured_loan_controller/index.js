@@ -3,7 +3,7 @@ const axios = require("axios");
 const SecuredLoan = require("../../model/secured_loan");
 const { getBearerToken, prepareRequestData, parseResponseData } = require("../../utility/encryption");
 
-const SAMMAAN_BASE_URL = "https://gatewayqa.sammaancapital.com";
+const SAMMAAN_BASE_URL = process.env.SAMMAAN_BASE_URL || "https://gatewayqa.sammaancapital.com";
 
 const getSammaanCreds = () => ({
   clientId: process.env.SAMMAAN_CLIENT_ID,
@@ -133,11 +133,12 @@ exports.submitSecuredLoan = async (req, res) => {
         console.log("🔓 Sammaan Decrypted Response Payload:", JSON.stringify(parsedResponse, null, 2));
 
         leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
+        var salesforceUniqueId = parsedResponse?.Payload?.UniqueId || null;
         console.log("=========================================");
         console.log("🎉 SAMMAAN CAPITAL LEAD CREATED!");
         console.log("📌 Lead ID (Salesforce):", leadId);
-        if (parsedResponse?.Payload?.UniqueId) {
-          console.log("📌 Sammaan Salesforce Unique ID:", parsedResponse.Payload.UniqueId);
+        if (salesforceUniqueId) {
+          console.log("📌 Sammaan Salesforce Unique ID:", salesforceUniqueId);
         }
         console.log("=========================================");
       } else {
@@ -175,6 +176,7 @@ exports.submitSecuredLoan = async (req, res) => {
       zipCode, city,
       product: "HL",
       externalLeadId: leadId,
+      salesforceUniqueId: salesforceUniqueId || null,
       status: "Success",
     });
 
@@ -189,7 +191,7 @@ exports.submitSecuredLoan = async (req, res) => {
 
         const docPayload = {
           ConsumerSystemName: "F2Fintech",
-          UniqueId: UniqueID,
+          UniqueId: salesforceUniqueId || UniqueID,
           LeadNo: leadId,
           DocumentType: "Aadhaar",
           DocumentSubtype: "Aadhaar KYC",
@@ -227,12 +229,19 @@ exports.submitSecuredLoan = async (req, res) => {
 
         if (docUploadResponse.data?.Message === "SUCCESS") {
           const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
-          if (docParsed.Payload?.status === "Success" || docParsed.Payload?.status === "SUCCESS") {
+          console.log("🔓 Sammaan Decrypted Doc Upload Response in submitLead:", JSON.stringify(docParsed, null, 2));
+          const docPayloadRes = docParsed?.Payload;
+          const isSuccess = docPayloadRes?.status?.toLowerCase() === "success" || !!docPayloadRes?.DocumentId;
+          if (isSuccess) {
             securedLoan.documentUploaded = true;
-            securedLoan.documentId = docParsed.Payload?.DocumentId;
+            securedLoan.documentId = docPayloadRes?.DocumentId || null;
             await securedLoan.save();
             console.log(`📄 Document uploaded successfully. Doc ID: ${securedLoan.documentId}`);
+          } else {
+            console.warn("⚠️ Sammaan Doc Upload returned unexpected payload:", docPayloadRes);
           }
+        } else {
+          console.error("❌ Sammaan Doc Upload raw error:", docUploadResponse.data);
         }
       } catch (docErr) {
         console.error("⚠️ Document upload failed (non-fatal):", docErr?.response?.data || docErr.message);
@@ -264,38 +273,71 @@ exports.getSecuredLoans = async (req, res) => {
 };
 
 exports.checkLeadStatus = async (req, res) => {
+  const { id } = req.params;
+  const startTime = Date.now();
+
+  console.log("================================================================================");
+  console.log("🔍 [SAMMAAN REVERSE STATUS CHECK] Request initiated");
+  console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
+  console.log(`📌 Param ID: ${id}`);
+
   try {
-    const { id } = req.params;
     const loan = isNaN(id)
       ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
       : await SecuredLoan.findByPk(id);
 
-    if (!loan || !loan.externalLeadId) {
-      return res.status(404).json({ status: "Error", message: "Lead not found or external LeadId missing." });
+    const targetLeadNo = loan?.externalLeadId || (typeof id === "string" ? id.trim() : null);
+
+    if (!targetLeadNo) {
+      console.warn("⚠️ [SAMMAAN REVERSE STATUS] Lead not found in DB and param ID is empty.");
+      return res.status(404).json({
+        status: "Error",
+        message: "Lead not found or external LeadId missing.",
+      });
     }
 
+    const consumerSystemName =
+      req.query?.consumerSystemName ||
+      req.body?.consumerSystemName ||
+      process.env.SAMMAAN_CONSUMER_SYSTEM_NAME ||
+      "F2Fintech";
+
     const creds = getSammaanCreds();
+
+    console.log(`🎯 Target LeadNo: ${targetLeadNo} (DB Match: ${loan ? `Yes, ID #${loan.id}` : "No direct DB record"})`);
+    console.log(`🏢 ConsumerSystemName: ${consumerSystemName}`);
+    console.log(`🌐 Sammaan Middleware URL: ${creds.middlewareUrl}`);
+
+    console.log("🔑 [SAMMAAN REVERSE STATUS] Authenticating & generating UniqueID with Sammaan Capital...");
     const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
+    console.log(`✅ [SAMMAAN REVERSE STATUS] Sammaan Auth Success. UniqueID: ${UniqueID}`);
 
     const statusPayload = {
-      ConsumerSystemName: "F2Fintech",
+      ConsumerSystemName: consumerSystemName,
       UniqueId: UniqueID,
-      LeadNo: loan.externalLeadId,
-      Filler1: "", Filler2: "",
+      LeadNo: targetLeadNo,
+      Filler1: "",
+      Filler2: "",
     };
+
+    console.log("📦 [SAMMAAN REVERSE STATUS] Plaintext Request Payload:");
+    console.log(JSON.stringify(statusPayload, null, 2));
 
     const encryptedData = prepareRequestData(statusPayload, key, iv);
     const messageId2 = uuidv4().replace(/-/g, "");
 
+    const requestEnvelope = {
+      ConsumerSystemName: consumerSystemName,
+      UniqueID,
+      RequestData: encryptedData,
+      APIURL: "NewLeadModuleAPI-postReversestatuscheck",
+      ExistingAPIMethod: "POST",
+    };
+
+    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request to Sammaan Reverse Status API...");
     const statusResponse = await axios.post(
       creds.middlewareUrl,
-      {
-        ConsumerSystemName: "F2Fintech",
-        UniqueID,
-        RequestData: encryptedData,
-        APIURL: "NewLeadModuleAPI-postReversestatuscheck",
-        ExistingAPIMethod: "POST",
-      },
+      requestEnvelope,
       {
         headers: {
           MessageId: messageId2,
@@ -307,34 +349,228 @@ exports.checkLeadStatus = async (req, res) => {
       }
     );
 
-    if (statusResponse.data && statusResponse.data.Message === "SUCCESS") {
-      const parsedResponse = parseResponseData(statusResponse.data.ResponseData, key, iv);
-      console.log("🔓 Sammaan Decrypted Status Response:", JSON.stringify(parsedResponse, null, 2));
+    const elapsed = Date.now() - startTime;
+    console.log(`📥 [SAMMAAN REVERSE STATUS] Sammaan Response received in ${elapsed}ms (HTTP Status: ${statusResponse.status})`);
+    console.log("📥 [SAMMAAN REVERSE STATUS] Raw Envelope Response:");
+    console.log(JSON.stringify(statusResponse.data, null, 2));
 
-      const payload = parsedResponse?.Payload;
-      if (payload && payload.LeadNo) {
-        loan.currentStatus = payload.Status || payload.Current_Status;
-        loan.sanctionAmount = payload.Sanction_Amount || null;
-        loan.disbursalAmount = payload.Disbursal_Amount || null;
-        loan.rejectReason = payload.Reject_Reason || null;
+    if (statusResponse.data && statusResponse.data.Message === "SUCCESS") {
+      try {
+        const parsedResponse = parseResponseData(statusResponse.data.ResponseData, key, iv);
+        console.log("================================================================================");
+        console.log("🔓 [SAMMAAN REVERSE STATUS] DECRYPTED LIVE RESPONSE:");
+        console.log(JSON.stringify(parsedResponse, null, 2));
+        console.log("================================================================================");
+
+        const payload = parsedResponse?.Payload;
+
+        if (payload && (payload.LeadNo || payload.Status || payload.Current_Status)) {
+          const resolvedStatus = payload.Status || payload.Current_Status || "Unknown";
+          const sanctionAmount = payload.Sanction_Amount || null;
+          const disbursalAmount = payload.Disbursal_Amount || null;
+          const rejectReason = payload.Reject_Reason || null;
+
+          if (loan) {
+            loan.currentStatus = resolvedStatus;
+            loan.sanctionAmount = sanctionAmount;
+            loan.disbursalAmount = disbursalAmount;
+            loan.rejectReason = rejectReason;
+            await loan.save();
+            console.log(`💾 [SAMMAAN REVERSE STATUS] DB record #${loan.id} updated successfully: Status = ${resolvedStatus}`);
+          }
+
+          return res.status(200).json({
+            status: "Success",
+            message: "Status fetched live from Sammaan Capital",
+            leadNo: targetLeadNo,
+            currentStatus: resolvedStatus,
+            sammaanLiveResponse: payload,
+            fullDecryptedResponse: parsedResponse,
+            data: loan || null,
+            timeElapsedMs: elapsed,
+          });
+        } else if (parsedResponse?.Error) {
+          console.error("❌ [SAMMAAN REVERSE STATUS] Sammaan Decrypted Error Object:");
+          console.error(JSON.stringify(parsedResponse.Error, null, 2));
+          return res.status(400).json({
+            status: "Error",
+            message: parsedResponse.Error.ErrorMessage || "Sammaan returned an error response",
+            leadNo: targetLeadNo,
+            errorDetails: parsedResponse.Error,
+            fullDecryptedResponse: parsedResponse,
+            rawResponse: statusResponse.data,
+            timeElapsedMs: elapsed,
+          });
+        } else {
+          console.warn("⚠️ [SAMMAAN REVERSE STATUS] Decrypted payload does not contain standard Lead fields:", parsedResponse);
+          return res.status(200).json({
+            status: "Success",
+            message: "Response decrypted from Sammaan Capital",
+            leadNo: targetLeadNo,
+            fullDecryptedResponse: parsedResponse,
+            data: loan || null,
+            timeElapsedMs: elapsed,
+          });
+        }
+      } catch (decryptErr) {
+        console.error("❌ [SAMMAAN REVERSE STATUS] Decryption failed:", decryptErr.message);
+        return res.status(500).json({
+          status: "Error",
+          message: "Failed to decrypt Sammaan response data",
+          decryptError: decryptErr.message,
+          rawResponse: statusResponse.data,
+          timeElapsedMs: elapsed,
+        });
+      }
+    } else {
+      console.error("================================================================================");
+      console.error("❌ [SAMMAAN REVERSE STATUS] Sammaan ESB returned Non-SUCCESS message:");
+      console.error(JSON.stringify(statusResponse.data, null, 2));
+      console.error("================================================================================");
+      return res.status(400).json({
+        status: "Error",
+        message: statusResponse.data?.Message || "Failed to fetch status from Sammaan Capital",
+        leadNo: targetLeadNo,
+        rawResponse: statusResponse.data,
+        timeElapsedMs: elapsed,
+      });
+    }
+  } catch (err) {
+    const elapsed = Date.now() - startTime;
+    console.error("================================================================================");
+    console.error("❌ [SAMMAAN REVERSE STATUS] EXCEPTION in checkLeadStatus:");
+    console.error("Error Message:", err.message);
+    if (err.response) {
+      console.error(`HTTP Status: ${err.response.status}`);
+      console.error("Response Data:", JSON.stringify(err.response.data, null, 2));
+      console.error("Response Headers:", err.response.headers);
+    }
+    console.error("Stack Trace:", err.stack);
+    console.error("================================================================================");
+
+    return res.status(500).json({
+      status: "Error",
+      message: err.message,
+      detail: err?.response?.data || null,
+      httpStatus: err?.response?.status || 500,
+      timeElapsedMs: elapsed,
+    });
+  }
+};
+
+exports.uploadSecuredLoanDocument = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const loan = isNaN(id)
+      ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
+      : await SecuredLoan.findByPk(id);
+
+    if (!loan || !loan.externalLeadId) {
+      return res.status(404).json({
+        status: "Error",
+        message: "Lead not found or external LeadId missing.",
+      });
+    }
+
+    const uploadedFile = req.files?.document;
+    if (!uploadedFile) {
+      return res.status(400).json({
+        status: "Error",
+        message: "No document attached. Please upload a file with key 'document'.",
+      });
+    }
+
+    const {
+      documentType = "Aadhaar",
+      documentSubtype = "Aadhaar KYC",
+    } = req.body;
+
+    const documentBase64 = uploadedFile.data.toString("base64");
+    const documentExtension = uploadedFile.name.substring(uploadedFile.name.lastIndexOf("."));
+
+    const creds = getSammaanCreds();
+    const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
+
+    const docPayload = {
+      ConsumerSystemName: "F2Fintech",
+      UniqueId: loan.salesforceUniqueId || UniqueID,
+      LeadNo: loan.externalLeadId,
+      DocumentType: documentType,
+      DocumentSubtype: documentSubtype,
+      DocumentName: uploadedFile.name,
+      VersionData: documentBase64,
+      DocumentExtention: documentExtension,
+      MimeType: uploadedFile.mimetype,
+      DocumentData: documentBase64,
+      Filler1: "", Filler2: "", Filler3: "", Filler4: "", Filler5: "",
+      Filler6: "", Filler7: "", Filler8: "", Filler9: "", Filler10: "",
+    };
+
+    const encryptedDocData = prepareRequestData(docPayload, key, iv);
+    const messageId = uuidv4().replace(/-/g, "");
+
+    const docUploadResponse = await axios.post(
+      creds.middlewareUrl,
+      {
+        ConsumerSystemName: "F2Fintech",
+        UniqueID,
+        RequestData: encryptedDocData,
+        APIURL: "DocUploadLeadJourneyModule-postUploaddoc",
+        ExistingAPIMethod: "POST",
+      },
+      {
+        headers: {
+          MessageId: messageId,
+          Sourceapplicationname: "MiddlewareEncryptDataAPI",
+          Servicename: "AggregatorLeadsAPI",
+          apikey: creds.apikey,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("📥 Sammaan Doc Upload Raw Response:", JSON.stringify(docUploadResponse.data));
+
+    if (docUploadResponse.data?.Message === "SUCCESS") {
+      const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
+      console.log("🔓 Sammaan Decrypted Doc Upload Response:", JSON.stringify(docParsed, null, 2));
+
+      const payload = docParsed?.Payload;
+      const isSuccess = payload?.status?.toLowerCase() === "success";
+
+      if (isSuccess || payload?.DocumentId) {
+        loan.documentUploaded = true;
+        loan.documentId = payload?.DocumentId || loan.documentId;
         await loan.save();
 
         return res.status(200).json({
           status: "Success",
-          message: "Status fetched live from Sammaan Capital",
+          message: payload?.message || "Document uploaded successfully to Sammaan Capital",
+          documentId: loan.documentId,
           sammaanLiveResponse: payload,
           data: loan,
         });
       }
+
+      return res.status(400).json({
+        status: "Error",
+        message: payload?.message || "Sammaan returned failure for document upload",
+        sammaanLiveResponse: payload,
+      });
     }
 
     return res.status(400).json({
       status: "Error",
-      message: "Failed to fetch status from Sammaan Capital",
-      rawResponse: statusResponse.data,
+      message: "Failed to upload document to Sammaan Capital",
+      rawResponse: docUploadResponse.data,
     });
-  } catch (err) {
-    console.error("Error in checkLeadStatus:", err?.response?.data || err);
-    return res.status(500).json({ status: "Error", message: err.message, detail: err?.response?.data });
+  } catch (error) {
+    console.error("Error in uploadSecuredLoanDocument:", error?.response?.data || error);
+    return res.status(500).json({
+      status: "Error",
+      message: error.message,
+      detail: error?.response?.data,
+    });
   }
 };
+

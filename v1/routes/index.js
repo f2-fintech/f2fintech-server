@@ -316,5 +316,9 @@ router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 router.post("/secured-loan", SecuredLoanController.submitSecuredLoan);
 router.get("/admin/secured-loans", SecuredLoanController.getSecuredLoans);
 router.get("/admin/secured-loans/:id/status", SecuredLoanController.checkLeadStatus);
+router.get("/secured-loans", SecuredLoanController.getSecuredLoans);
+router.get("/secured-loans/:id/status", SecuredLoanController.checkLeadStatus);
+router.post("/admin/secured-loans/:id/upload-document", SecuredLoanController.uploadSecuredLoanDocument);
+router.post("/secured-loans/:id/upload-document", SecuredLoanController.uploadSecuredLoanDocument);
 
 module.exports = router;
