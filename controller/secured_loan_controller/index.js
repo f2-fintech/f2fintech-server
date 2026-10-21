@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios");
 const SecuredLoan = require("../../model/secured_loan");
-const { getBearerToken, prepareRequestData, parseResponseData } = require("../../utility/encryption");
+const { getBearerToken, prepareRequestData, prepareRequestDataDirectJson, parseResponseData } = require("../../utility/encryption");
 
 const SAMMAAN_BASE_URL = process.env.SAMMAAN_BASE_URL || "https://gatewayqa.sammaancapital.com";
 
@@ -312,9 +312,11 @@ exports.checkLeadStatus = async (req, res) => {
     const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
     console.log(`✅ [SAMMAAN REVERSE STATUS] Sammaan Auth Success. UniqueID: ${UniqueID}`);
 
+    const innerUniqueId = loan?.salesforceUniqueId || UniqueID;
+
     const statusPayload = {
       ConsumerSystemName: consumerSystemName,
-      UniqueId: UniqueID,
+      UniqueId: innerUniqueId,
       LeadNo: targetLeadNo,
       Filler1: "",
       Filler2: "",
@@ -323,7 +325,8 @@ exports.checkLeadStatus = async (req, res) => {
     console.log("📦 [SAMMAAN REVERSE STATUS] Plaintext Request Payload:");
     console.log(JSON.stringify(statusPayload, null, 2));
 
-    const encryptedData = prepareRequestData(statusPayload, key, iv);
+    // IBM ACE JSON parser requires direct JSON string encrypted in AES-256-CBC (no Base64 intermediate)
+    const encryptedData = prepareRequestDataDirectJson(statusPayload, key, iv);
     const messageId2 = uuidv4().replace(/-/g, "");
 
     const requestEnvelope = {
@@ -334,7 +337,7 @@ exports.checkLeadStatus = async (req, res) => {
       ExistingAPIMethod: "POST",
     };
 
-    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request to Sammaan Reverse Status API...");
+    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request (Direct JSON in AES) to Sammaan Reverse Status API...");
     const statusResponse = await axios.post(
       creds.middlewareUrl,
       requestEnvelope,
@@ -448,9 +451,9 @@ exports.checkLeadStatus = async (req, res) => {
     console.error("Stack Trace:", err.stack);
     console.error("================================================================================");
 
-    return res.status(500).json({
+    return res.status(err.response?.status || 500).json({
       status: "Error",
-      message: err.message,
+      message: err.response?.data?.Error?.ErrorMessage || err.response?.data?.Message || err.message,
       detail: err?.response?.data || null,
       httpStatus: err?.response?.status || 500,
       timeElapsedMs: elapsed,
