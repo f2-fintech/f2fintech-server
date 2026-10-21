@@ -272,9 +272,65 @@ exports.getSecuredLoans = async (req, res) => {
   }
 };
 
+function formatEmailSummary({
+  targetLeadNo,
+  middlewareUrl,
+  httpStatus,
+  statusPayload,
+  requestEnvelope,
+  rawResponse,
+  parsedResponse,
+}) {
+  const border = "================================================================================";
+  const divider = "--------------------------------------------------------------------------------";
+  const lines = [
+    border,
+    "📧 [READY-TO-MAIL REPORT FOR SAMMAAN TEAM]",
+    border,
+    "Hi Team,",
+    "",
+    "Please find below the requested details for the Reverse Status Check API:",
+    "",
+    `1. Target Lead Number : ${targetLeadNo || "N/A"}`,
+    `2. HTTP Status Code   : ${httpStatus || "N/A"}`,
+    `3. Middleware Endpoint: ${middlewareUrl || "N/A"}`,
+    `4. APIURL Name        : NewLeadModuleAPI-postReversestatuscheck`,
+    `5. Timestamp (UTC)    : ${new Date().toISOString()}`,
+    "",
+    divider,
+    "A. PLAINTEXT (DECRYPTED) REQUEST PAYLOAD:",
+    divider,
+    JSON.stringify(statusPayload, null, 2),
+    "",
+    divider,
+    "B. ENCRYPTED REQUEST ENVELOPE (Sent to Sammaan Gateway):",
+    divider,
+    JSON.stringify(requestEnvelope, null, 2),
+    "",
+    divider,
+    "C. RAW ENVELOPE RESPONSE (Received from Sammaan Gateway):",
+    divider,
+    `HTTP Status: ${httpStatus}`,
+    JSON.stringify(rawResponse, null, 2),
+    "",
+    divider,
+    "D. PLAINTEXT (DECRYPTED) RESPONSE PAYLOAD:",
+    divider,
+    parsedResponse
+      ? JSON.stringify(parsedResponse, null, 2)
+      : "N/A (Response was not encrypted / Gateway returned plaintext error or non-SUCCESS message)",
+    border,
+  ];
+  return lines.join("\n");
+}
+
 exports.checkLeadStatus = async (req, res) => {
   const { id } = req.params;
   const startTime = Date.now();
+  let targetLeadNo = null;
+  let creds = null;
+  let statusPayload = null;
+  let requestEnvelope = null;
 
   console.log("================================================================================");
   console.log("🔍 [SAMMAAN REVERSE STATUS CHECK] Request initiated");
@@ -286,7 +342,7 @@ exports.checkLeadStatus = async (req, res) => {
       ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
       : await SecuredLoan.findByPk(id);
 
-    const targetLeadNo = loan?.externalLeadId || (typeof id === "string" ? id.trim() : null);
+    targetLeadNo = loan?.externalLeadId || (typeof id === "string" ? id.trim() : null);
 
     if (!targetLeadNo) {
       console.warn("⚠️ [SAMMAAN REVERSE STATUS] Lead not found in DB and param ID is empty.");
@@ -302,7 +358,7 @@ exports.checkLeadStatus = async (req, res) => {
       process.env.SAMMAAN_CONSUMER_SYSTEM_NAME ||
       "F2Fintech";
 
-    const creds = getSammaanCreds();
+    creds = getSammaanCreds();
 
     console.log(`🎯 Target LeadNo: ${targetLeadNo} (DB Match: ${loan ? `Yes, ID #${loan.id}` : "No direct DB record"})`);
     console.log(`🏢 ConsumerSystemName: ${consumerSystemName}`);
@@ -314,7 +370,7 @@ exports.checkLeadStatus = async (req, res) => {
 
     const innerUniqueId = loan?.salesforceUniqueId || UniqueID;
 
-    const statusPayload = {
+    statusPayload = {
       ConsumerSystemName: consumerSystemName,
       UniqueId: innerUniqueId,
       LeadNo: targetLeadNo,
@@ -329,7 +385,7 @@ exports.checkLeadStatus = async (req, res) => {
     const encryptedData = prepareRequestDataDirectJson(statusPayload, key, iv);
     const messageId2 = uuidv4().replace(/-/g, "");
 
-    const requestEnvelope = {
+    requestEnvelope = {
       ConsumerSystemName: consumerSystemName,
       UniqueID,
       RequestData: encryptedData,
@@ -365,6 +421,18 @@ exports.checkLeadStatus = async (req, res) => {
         console.log(JSON.stringify(parsedResponse, null, 2));
         console.log("================================================================================");
 
+        // Generate email-ready block
+        const emailSummary = formatEmailSummary({
+          targetLeadNo,
+          middlewareUrl: creds.middlewareUrl,
+          httpStatus: `${statusResponse.status} ${statusResponse.statusText || "OK"}`,
+          statusPayload,
+          requestEnvelope,
+          rawResponse: statusResponse.data,
+          parsedResponse,
+        });
+        console.log("\n" + emailSummary + "\n");
+
         const payload = parsedResponse?.Payload;
 
         if (payload && (payload.LeadNo || payload.Status || payload.Current_Status)) {
@@ -389,6 +457,7 @@ exports.checkLeadStatus = async (req, res) => {
             currentStatus: resolvedStatus,
             sammaanLiveResponse: payload,
             fullDecryptedResponse: parsedResponse,
+            emailReadySummary: emailSummary,
             data: loan || null,
             timeElapsedMs: elapsed,
           });
@@ -402,6 +471,7 @@ exports.checkLeadStatus = async (req, res) => {
             errorDetails: parsedResponse.Error,
             fullDecryptedResponse: parsedResponse,
             rawResponse: statusResponse.data,
+            emailReadySummary: emailSummary,
             timeElapsedMs: elapsed,
           });
         } else {
@@ -411,17 +481,30 @@ exports.checkLeadStatus = async (req, res) => {
             message: "Response decrypted from Sammaan Capital",
             leadNo: targetLeadNo,
             fullDecryptedResponse: parsedResponse,
+            emailReadySummary: emailSummary,
             data: loan || null,
             timeElapsedMs: elapsed,
           });
         }
       } catch (decryptErr) {
         console.error("❌ [SAMMAAN REVERSE STATUS] Decryption failed:", decryptErr.message);
+        const emailSummary = formatEmailSummary({
+          targetLeadNo,
+          middlewareUrl: creds.middlewareUrl,
+          httpStatus: `${statusResponse.status} (Decryption Failed)`,
+          statusPayload,
+          requestEnvelope,
+          rawResponse: statusResponse.data,
+          parsedResponse: { decryptError: decryptErr.message },
+        });
+        console.log("\n" + emailSummary + "\n");
+
         return res.status(500).json({
           status: "Error",
           message: "Failed to decrypt Sammaan response data",
           decryptError: decryptErr.message,
           rawResponse: statusResponse.data,
+          emailReadySummary: emailSummary,
           timeElapsedMs: elapsed,
         });
       }
@@ -430,11 +513,24 @@ exports.checkLeadStatus = async (req, res) => {
       console.error("❌ [SAMMAAN REVERSE STATUS] Sammaan ESB returned Non-SUCCESS message:");
       console.error(JSON.stringify(statusResponse.data, null, 2));
       console.error("================================================================================");
+
+      const emailSummary = formatEmailSummary({
+        targetLeadNo,
+        middlewareUrl: creds.middlewareUrl,
+        httpStatus: `${statusResponse.status} (Non-SUCCESS ESB Message)`,
+        statusPayload,
+        requestEnvelope,
+        rawResponse: statusResponse.data,
+        parsedResponse: null,
+      });
+      console.log("\n" + emailSummary + "\n");
+
       return res.status(400).json({
         status: "Error",
         message: statusResponse.data?.Message || "Failed to fetch status from Sammaan Capital",
         leadNo: targetLeadNo,
         rawResponse: statusResponse.data,
+        emailReadySummary: emailSummary,
         timeElapsedMs: elapsed,
       });
     }
@@ -451,11 +547,24 @@ exports.checkLeadStatus = async (req, res) => {
     console.error("Stack Trace:", err.stack);
     console.error("================================================================================");
 
+    const httpStatus = err.response ? `${err.response.status} ${err.response.statusText || ""}`.trim() : "500 Error";
+    const emailSummary = formatEmailSummary({
+      targetLeadNo: targetLeadNo || id,
+      middlewareUrl: creds?.middlewareUrl || SAMMAAN_BASE_URL,
+      httpStatus,
+      statusPayload: statusPayload || {},
+      requestEnvelope: requestEnvelope || {},
+      rawResponse: err?.response?.data || { message: err.message },
+      parsedResponse: null,
+    });
+    console.log("\n" + emailSummary + "\n");
+
     return res.status(err.response?.status || 500).json({
       status: "Error",
       message: err.response?.data?.Error?.ErrorMessage || err.response?.data?.Message || err.message,
       detail: err?.response?.data || null,
       httpStatus: err?.response?.status || 500,
+      emailReadySummary: emailSummary,
       timeElapsedMs: elapsed,
     });
   }
