@@ -133,7 +133,12 @@ exports.submitSecuredLoan = async (req, res) => {
         console.log("🔓 Sammaan Decrypted Response Payload:", JSON.stringify(parsedResponse, null, 2));
 
         leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
-        var salesforceUniqueId = parsedResponse?.Payload?.UniqueId || null;
+        var salesforceUniqueId =
+          parsedResponse?.Payload?.UniqueId ||
+          parsedResponse?.Payload?.UniqueID ||
+          parsedResponse?.Payload?.uniqueId ||
+          parsedResponse?.UniqueId ||
+          null;
         console.log("=========================================");
         console.log("🎉 SAMMAAN CAPITAL LEAD CREATED!");
         console.log("📌 Lead ID (Salesforce):", leadId);
@@ -292,10 +297,12 @@ function formatEmailSummary({
     "Please find below the requested details for the Reverse Status Check API:",
     "",
     `1. Target Lead Number : ${targetLeadNo || "N/A"}`,
-    `2. HTTP Status Code   : ${httpStatus || "N/A"}`,
-    `3. Middleware Endpoint: ${middlewareUrl || "N/A"}`,
-    `4. APIURL Name        : NewLeadModuleAPI-postReversestatuscheck`,
-    `5. Timestamp (UTC)    : ${new Date().toISOString()}`,
+    `2. Salesforce UniqueID: ${statusPayload?.UniqueId || "N/A"} (18-digit Lead Unique ID)`,
+    `3. Session UniqueID   : ${requestEnvelope?.UniqueID || "N/A"} (Session ID from getUniqueID API)`,
+    `4. HTTP Status Code   : ${httpStatus || "N/A"}`,
+    `5. Middleware Endpoint: ${middlewareUrl || "N/A"}`,
+    `6. APIURL Name        : NewLeadModuleAPI-postReversestatuscheck`,
+    `7. Timestamp (UTC)    : ${new Date().toISOString()}`,
     "",
     divider,
     "A. PLAINTEXT (DECRYPTED) REQUEST PAYLOAD:",
@@ -368,7 +375,31 @@ exports.checkLeadStatus = async (req, res) => {
     const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
     console.log(`✅ [SAMMAAN REVERSE STATUS] Sammaan Auth Success. UniqueID: ${UniqueID}`);
 
-    const innerUniqueId = loan?.salesforceUniqueId || UniqueID;
+    const explicitSalesforceId =
+      req.query?.salesforceUniqueId ||
+      req.query?.uniqueId ||
+      req.body?.salesforceUniqueId ||
+      req.body?.uniqueId;
+
+    const innerUniqueId = (explicitSalesforceId && explicitSalesforceId.trim()) || loan?.salesforceUniqueId || UniqueID;
+
+    // If an 18-character Salesforce Unique ID is supplied and DB record has null, persist it
+    if (loan && explicitSalesforceId && explicitSalesforceId.trim() && loan.salesforceUniqueId !== explicitSalesforceId.trim()) {
+      loan.salesforceUniqueId = explicitSalesforceId.trim();
+      await loan.save();
+      console.log(`💾 [SAMMAAN REVERSE STATUS] Saved 18-digit salesforceUniqueId (${loan.salesforceUniqueId}) to DB lead #${loan.id}`);
+    }
+
+    if (innerUniqueId === UniqueID) {
+      console.warn("================================================================================");
+      console.warn("⚠️  [SAMMAAN REVERSE STATUS] ATTENTION: 18-DIGIT SALESFORCE UNIQUE ID NOT FOUND!");
+      console.warn(`📌 Sammaan Capital requires the 18-digit Unique ID (e.g., 00Q...) returned in Lead Push.`);
+      console.warn(`📌 Falling back to session UniqueID: "${UniqueID}". Sammaan will likely reject this request.`);
+      console.warn("📌 Solution: Pass ?salesforceUniqueId=00Q... in query or enter it on /status UI page.");
+      console.warn("================================================================================");
+    } else {
+      console.log(`🎯 [SAMMAAN REVERSE STATUS] Using 18-digit Salesforce UniqueID: ${innerUniqueId}`);
+    }
 
     statusPayload = {
       ConsumerSystemName: consumerSystemName,
