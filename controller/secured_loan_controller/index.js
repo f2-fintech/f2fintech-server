@@ -13,12 +13,16 @@ const getSammaanCreds = () => ({
   middlewareUrl: `${SAMMAAN_BASE_URL}/esb/middlewareencryptdataapi/v1/encryptdata`,
 });
 
-async function getTokenAndUniqueId(creds) {
+async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
   const token = await getBearerToken(creds.clientId, creds.clientSecret);
   const messageId = uuidv4().replace(/-/g, "");
+
+  console.log(`🔑 [SAMMAAN AUTH] Requesting UniqueID & Key from: ${creds.generateUniqueIdUrl}`);
+  console.log(`🔑 [SAMMAAN AUTH] ConsumerSystemName: ${consumerSystemName}`);
+
   const uniqueIdResponse = await axios.post(
     creds.generateUniqueIdUrl,
-    { ConsumerSystemName: "F2Fintech" },
+    { ConsumerSystemName: consumerSystemName },
     {
       headers: {
         MessageId: messageId,
@@ -29,8 +33,24 @@ async function getTokenAndUniqueId(creds) {
       },
     }
   );
-  console.log("this is the main concept of things", uniqueIdResponse.data.Payload)
-  const { UniqueID, key, iv } = uniqueIdResponse.data.Payload;
+
+  console.log("🔑 [SAMMAAN AUTH] generateuniqueid raw response:", JSON.stringify(uniqueIdResponse.data, null, 2));
+
+  const payload = uniqueIdResponse.data?.Payload || uniqueIdResponse.data?.payload;
+
+  if (!payload || !payload.UniqueID) {
+    const errMsg =
+      uniqueIdResponse.data?.Error?.ErrorMessage ||
+      uniqueIdResponse.data?.Error?.ErrorDetails ||
+      uniqueIdResponse.data?.Message ||
+      uniqueIdResponse.data?.message ||
+      "Sammaan generateuniqueid API returned no Payload (check IP whitelisting or credentials)";
+    console.error("❌ [SAMMAAN AUTH] Failed to retrieve UniqueID:", errMsg);
+    console.error("❌ Full Response Data from Sammaan:", JSON.stringify(uniqueIdResponse.data, null, 2));
+    throw new Error(`Sammaan generateuniqueid failed: ${errMsg}`);
+  }
+
+  const { UniqueID, key, iv } = payload;
   return { token, UniqueID, key, iv };
 }
 
@@ -372,7 +392,7 @@ exports.checkLeadStatus = async (req, res) => {
     console.log(`🌐 Sammaan Middleware URL: ${creds.middlewareUrl}`);
 
     console.log("🔑 [SAMMAAN REVERSE STATUS] Authenticating & generating UniqueID with Sammaan Capital...");
-    const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds);
+    const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds, consumerSystemName);
     console.log(`✅ [SAMMAAN REVERSE STATUS] Sammaan Auth Success. UniqueID: ${UniqueID}`);
 
     const explicitSalesforceId =
