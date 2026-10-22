@@ -444,12 +444,14 @@ exports.checkLeadStatus = async (req, res) => {
       ExistingAPIMethod: "POST",
     };
 
-    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request (Direct JSON in AES) to Sammaan Reverse Status API...");
+    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request to Sammaan Reverse Status API...");
     const statusResponse = await axios.post(
       creds.middlewareUrl,
-      requestEnvelope,
+      JSON.stringify(requestEnvelope),
       {
         headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*",
           MessageId: messageId2,
           Sourceapplicationname: "MiddlewareEncryptDataAPI",
           Servicename: "ReverseStatusCheckAPI",
