@@ -17,9 +17,6 @@ async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
   const token = await getBearerToken(creds.clientId, creds.clientSecret);
   const messageId = uuidv4().replace(/-/g, "");
 
-  console.log(`🔑 [SAMMAAN AUTH] Requesting UniqueID & Key from: ${creds.generateUniqueIdUrl}`);
-  console.log(`🔑 [SAMMAAN AUTH] ConsumerSystemName: ${consumerSystemName}`);
-
   const uniqueIdResponse = await axios.post(
     creds.generateUniqueIdUrl,
     { ConsumerSystemName: consumerSystemName },
@@ -34,8 +31,6 @@ async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
     }
   );
 
-  console.log("🔑 [SAMMAAN AUTH] generateuniqueid raw response:", JSON.stringify(uniqueIdResponse.data, null, 2));
-
   const payload = uniqueIdResponse.data?.Payload || uniqueIdResponse.data?.payload;
 
   if (!payload || !payload.UniqueID) {
@@ -45,8 +40,7 @@ async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
       uniqueIdResponse.data?.Message ||
       uniqueIdResponse.data?.message ||
       "Sammaan generateuniqueid API returned no Payload (check IP whitelisting or credentials)";
-    console.error("❌ [SAMMAAN AUTH] Failed to retrieve UniqueID:", errMsg);
-    console.error("❌ Full Response Data from Sammaan:", JSON.stringify(uniqueIdResponse.data, null, 2));
+    console.error("[SAMMAAN AUTH] Failed to retrieve UniqueID:", errMsg);
     throw new Error(`Sammaan generateuniqueid failed: ${errMsg}`);
   }
 
@@ -65,15 +59,14 @@ exports.submitSecuredLoan = async (req, res) => {
       zipCode, city,
     } = req.body;
 
-    // 1. Get bearer token + unique ID + encryption keys FROM SAMMAAN FIRST
-    // NOTE: Sammaan requires IP whitelisting — share your server public IP with them.
+    // 1. Get bearer token + unique ID + encryption keys
     const creds = getSammaanCreds();
     let token, UniqueID, key, iv;
     try {
       ({ token, UniqueID, key, iv } = await getTokenAndUniqueId(creds));
     } catch (apiErr) {
       const errMsg = apiErr?.response?.data || apiErr?.response?.status || apiErr.message;
-      console.error("❌ Sammaan Auth/UniqueID API failed:", errMsg, apiErr);
+      console.error("[SAMMAAN] Auth/UniqueID API failed:", errMsg);
       return res.status(502).json({
         status: "Error",
         message: "Sammaan Capital API unreachable. Please try again later.",
@@ -121,11 +114,8 @@ exports.submitSecuredLoan = async (req, res) => {
     // 3. Call Sammaan Lead Push API
     let leadId = null;
     let mainApiResponse = null;
+    let salesforceUniqueId = null;
     try {
-      console.log("📤 Submitting Lead to Sammaan Middleware API...");
-      console.log("   UniqueID:", UniqueID);
-      console.log("   APIURL: AggregatorLeads-postAggregators");
-
       mainApiResponse = await axios.post(
         creds.middlewareUrl,
         {
@@ -146,32 +136,22 @@ exports.submitSecuredLoan = async (req, res) => {
         }
       );
 
-      console.log("📥 Sammaan Lead Push Raw Response:", JSON.stringify(mainApiResponse.data));
-
       if (mainApiResponse.data?.Message === "SUCCESS") {
         const parsedResponse = parseResponseData(mainApiResponse.data.ResponseData, key, iv);
-        console.log("🔓 Sammaan Decrypted Response Payload:", JSON.stringify(parsedResponse, null, 2));
 
         leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
-        var salesforceUniqueId =
+        salesforceUniqueId =
           parsedResponse?.Payload?.UniqueId ||
           parsedResponse?.Payload?.UniqueID ||
           parsedResponse?.Payload?.uniqueId ||
           parsedResponse?.UniqueId ||
           null;
-        console.log("=========================================");
-        console.log("🎉 SAMMAAN CAPITAL LEAD CREATED!");
-        console.log("📌 Lead ID (Salesforce):", leadId);
-        if (salesforceUniqueId) {
-          console.log("📌 Sammaan Salesforce Unique ID:", salesforceUniqueId);
-        }
-        console.log("=========================================");
       } else {
-        console.error("❌ Sammaan Lead Push returned non-SUCCESS message:", mainApiResponse.data);
+        console.error("[SAMMAAN] Lead Push returned non-SUCCESS:", mainApiResponse.data);
       }
     } catch (leadErr) {
       const errMsg = leadErr?.response?.data || leadErr?.response?.status || leadErr.message;
-      console.error("❌ Sammaan Lead Push API failed:", errMsg);
+      console.error("[SAMMAAN] Lead Push API failed:", errMsg);
       return res.status(502).json({
         status: "Error",
         message: "Failed to create lead on Sammaan Capital. Please try again.",
@@ -181,7 +161,7 @@ exports.submitSecuredLoan = async (req, res) => {
 
     // 4. Sammaan Lead creation failed (non-exception, bad response)
     if (!leadId) {
-      console.error("❌ Sammaan Capital did not return a Lead ID. Response was:", mainApiResponse?.data);
+      console.error("[SAMMAAN] Did not return a Lead ID. Response:", mainApiResponse?.data);
       return res.status(400).json({
         status: "Error",
         message: "Sammaan Capital did not return a Lead ID. Lead not saved.",
@@ -189,7 +169,7 @@ exports.submitSecuredLoan = async (req, res) => {
       });
     }
 
-    // 5. ✅ Only NOW save to our DB — Sammaan confirmed the lead
+    // 5. Save to DB — Sammaan confirmed the lead
     const securedLoan = await SecuredLoan.create({
       firstName, middleName, lastName,
       mobileNo, emailId, aadhaarNo, panNo, residentialStatus,
@@ -204,8 +184,6 @@ exports.submitSecuredLoan = async (req, res) => {
       salesforceUniqueId: salesforceUniqueId || null,
       status: "Success",
     });
-
-    console.log(`💾 Saved to Database -> DB ID: ${securedLoan.id}, externalLeadId: ${securedLoan.externalLeadId}`);
 
     // 6. Upload Document if provided (optional — non-blocking)
     const uploadedFile = req.files?.document;
@@ -254,22 +232,20 @@ exports.submitSecuredLoan = async (req, res) => {
 
         if (docUploadResponse.data?.Message === "SUCCESS") {
           const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
-          console.log("🔓 Sammaan Decrypted Doc Upload Response in submitLead:", JSON.stringify(docParsed, null, 2));
           const docPayloadRes = docParsed?.Payload;
           const isSuccess = docPayloadRes?.status?.toLowerCase() === "success" || !!docPayloadRes?.DocumentId;
           if (isSuccess) {
             securedLoan.documentUploaded = true;
             securedLoan.documentId = docPayloadRes?.DocumentId || null;
             await securedLoan.save();
-            console.log(`📄 Document uploaded successfully. Doc ID: ${securedLoan.documentId}`);
           } else {
-            console.warn("⚠️ Sammaan Doc Upload returned unexpected payload:", docPayloadRes);
+            console.error("[SAMMAAN] Doc Upload unexpected payload:", docPayloadRes);
           }
         } else {
-          console.error("❌ Sammaan Doc Upload raw error:", docUploadResponse.data);
+          console.error("[SAMMAAN] Doc Upload failed:", docUploadResponse.data);
         }
       } catch (docErr) {
-        console.error("⚠️ Document upload failed (non-fatal):", docErr?.response?.data || docErr.message);
+        console.error("[SAMMAAN] Document upload failed (non-fatal):", docErr?.response?.data || docErr.message);
       }
     }
 
@@ -282,7 +258,7 @@ exports.submitSecuredLoan = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error in submitSecuredLoan:", error?.response?.data || error);
+    console.error("[SAMMAAN] submitSecuredLoan error:", error?.response?.data || error);
     return res.status(500).json({ status: "Error", message: error.message });
   }
 };
@@ -359,11 +335,6 @@ exports.checkLeadStatus = async (req, res) => {
   let statusPayload = null;
   let requestEnvelope = null;
 
-  console.log("================================================================================");
-  console.log("🔍 [SAMMAAN REVERSE STATUS CHECK] Request initiated");
-  console.log(`⏰ Timestamp: ${new Date().toISOString()}`);
-  console.log(`📌 Param ID: ${id}`);
-
   try {
     const loan = isNaN(id)
       ? await SecuredLoan.findOne({ where: { externalLeadId: id } })
@@ -372,7 +343,6 @@ exports.checkLeadStatus = async (req, res) => {
     targetLeadNo = loan?.externalLeadId || (typeof id === "string" ? id.trim() : null);
 
     if (!targetLeadNo) {
-      console.warn("⚠️ [SAMMAAN REVERSE STATUS] Lead not found in DB and param ID is empty.");
       return res.status(404).json({
         status: "Error",
         message: "Lead not found or external LeadId missing.",
@@ -387,13 +357,7 @@ exports.checkLeadStatus = async (req, res) => {
 
     creds = getSammaanCreds();
 
-    console.log(`🎯 Target LeadNo: ${targetLeadNo} (DB Match: ${loan ? `Yes, ID #${loan.id}` : "No direct DB record"})`);
-    console.log(`🏢 ConsumerSystemName: ${consumerSystemName}`);
-    console.log(`🌐 Sammaan Middleware URL: ${creds.middlewareUrl}`);
-
-    console.log("🔑 [SAMMAAN REVERSE STATUS] Authenticating & generating UniqueID with Sammaan Capital...");
     const { token, UniqueID, key, iv } = await getTokenAndUniqueId(creds, consumerSystemName);
-    console.log(`✅ [SAMMAAN REVERSE STATUS] Sammaan Auth Success. UniqueID: ${UniqueID}`);
 
     const explicitSalesforceId =
       req.query?.salesforceUniqueId ||
@@ -403,22 +367,14 @@ exports.checkLeadStatus = async (req, res) => {
 
     const innerUniqueId = (explicitSalesforceId && explicitSalesforceId.trim()) || loan?.salesforceUniqueId || UniqueID;
 
-    // If an 18-character Salesforce Unique ID is supplied and DB record has null, persist it
+    // Persist salesforceUniqueId if newly provided
     if (loan && explicitSalesforceId && explicitSalesforceId.trim() && loan.salesforceUniqueId !== explicitSalesforceId.trim()) {
       loan.salesforceUniqueId = explicitSalesforceId.trim();
       await loan.save();
-      console.log(`💾 [SAMMAAN REVERSE STATUS] Saved 18-digit salesforceUniqueId (${loan.salesforceUniqueId}) to DB lead #${loan.id}`);
     }
 
     if (innerUniqueId === UniqueID) {
-      console.warn("================================================================================");
-      console.warn("⚠️  [SAMMAAN REVERSE STATUS] ATTENTION: 18-DIGIT SALESFORCE UNIQUE ID NOT FOUND!");
-      console.warn(`📌 Sammaan Capital requires the 18-digit Unique ID (e.g., 00Q...) returned in Lead Push.`);
-      console.warn(`📌 Falling back to session UniqueID: "${UniqueID}". Sammaan will likely reject this request.`);
-      console.warn("📌 Solution: Pass ?salesforceUniqueId=00Q... in query or enter it on /status UI page.");
-      console.warn("================================================================================");
-    } else {
-      console.log(`🎯 [SAMMAAN REVERSE STATUS] Using 18-digit Salesforce UniqueID: ${innerUniqueId}`);
+      console.error("[SAMMAAN] 18-digit Salesforce UniqueID not found. Falling back to session UniqueID — request may be rejected.");
     }
 
     statusPayload = {
@@ -429,10 +385,7 @@ exports.checkLeadStatus = async (req, res) => {
       Filler2: "",
     };
 
-    console.log("📦 [SAMMAAN REVERSE STATUS] Plaintext Request Payload:");
-    console.log(JSON.stringify(statusPayload, null, 2));
-
-    // Sammaan doc: JSON → Base64 → AES-256-CBC (same as Lead Push API)
+    // Sammaan doc: JSON → Base64 → AES-256-CBC
     const encryptedData = prepareRequestData(statusPayload, key, iv);
     const messageId2 = uuidv4().replace(/-/g, "");
 
@@ -444,7 +397,6 @@ exports.checkLeadStatus = async (req, res) => {
       ExistingAPIMethod: "POST",
     };
 
-    console.log("🚀 [SAMMAAN REVERSE STATUS] Sending encrypted request to Sammaan Reverse Status API...");
     const statusResponse = await axios.post(
       creds.middlewareUrl,
       JSON.stringify(requestEnvelope),
@@ -462,19 +414,11 @@ exports.checkLeadStatus = async (req, res) => {
     );
 
     const elapsed = Date.now() - startTime;
-    console.log(`📥 [SAMMAAN REVERSE STATUS] Sammaan Response received in ${elapsed}ms (HTTP Status: ${statusResponse.status})`);
-    console.log("📥 [SAMMAAN REVERSE STATUS] Raw Envelope Response:");
-    console.log(JSON.stringify(statusResponse.data, null, 2));
 
     if (statusResponse.data && statusResponse.data.Message === "SUCCESS") {
       try {
         const parsedResponse = parseResponseData(statusResponse.data.ResponseData, key, iv);
-        console.log("================================================================================");
-        console.log("🔓 [SAMMAAN REVERSE STATUS] DECRYPTED LIVE RESPONSE:");
-        console.log(JSON.stringify(parsedResponse, null, 2));
-        console.log("================================================================================");
 
-        // Generate email-ready block
         const emailSummary = formatEmailSummary({
           targetLeadNo,
           middlewareUrl: creds.middlewareUrl,
@@ -484,7 +428,6 @@ exports.checkLeadStatus = async (req, res) => {
           rawResponse: statusResponse.data,
           parsedResponse,
         });
-        console.log("\n" + emailSummary + "\n");
 
         const payload = parsedResponse?.Payload;
 
@@ -500,7 +443,6 @@ exports.checkLeadStatus = async (req, res) => {
             loan.disbursalAmount = disbursalAmount;
             loan.rejectReason = rejectReason;
             await loan.save();
-            console.log(`💾 [SAMMAAN REVERSE STATUS] DB record #${loan.id} updated successfully: Status = ${resolvedStatus}`);
           }
 
           return res.status(200).json({
@@ -515,8 +457,7 @@ exports.checkLeadStatus = async (req, res) => {
             timeElapsedMs: elapsed,
           });
         } else if (parsedResponse?.Error) {
-          console.error("❌ [SAMMAAN REVERSE STATUS] Sammaan Decrypted Error Object:");
-          console.error(JSON.stringify(parsedResponse.Error, null, 2));
+          console.error("[SAMMAAN] Decrypted error response:", parsedResponse.Error);
           return res.status(400).json({
             status: "Error",
             message: parsedResponse.Error.ErrorMessage || "Sammaan returned an error response",
@@ -528,7 +469,6 @@ exports.checkLeadStatus = async (req, res) => {
             timeElapsedMs: elapsed,
           });
         } else {
-          console.warn("⚠️ [SAMMAAN REVERSE STATUS] Decrypted payload does not contain standard Lead fields:", parsedResponse);
           return res.status(200).json({
             status: "Success",
             message: "Response decrypted from Sammaan Capital",
@@ -540,7 +480,7 @@ exports.checkLeadStatus = async (req, res) => {
           });
         }
       } catch (decryptErr) {
-        console.error("❌ [SAMMAAN REVERSE STATUS] Decryption failed:", decryptErr.message);
+        console.error("[SAMMAAN] Decryption failed:", decryptErr.message);
         const emailSummary = formatEmailSummary({
           targetLeadNo,
           middlewareUrl: creds.middlewareUrl,
@@ -550,7 +490,6 @@ exports.checkLeadStatus = async (req, res) => {
           rawResponse: statusResponse.data,
           parsedResponse: { decryptError: decryptErr.message },
         });
-        console.log("\n" + emailSummary + "\n");
 
         return res.status(500).json({
           status: "Error",
@@ -562,10 +501,7 @@ exports.checkLeadStatus = async (req, res) => {
         });
       }
     } else {
-      console.error("================================================================================");
-      console.error("❌ [SAMMAAN REVERSE STATUS] Sammaan ESB returned Non-SUCCESS message:");
-      console.error(JSON.stringify(statusResponse.data, null, 2));
-      console.error("================================================================================");
+      console.error("[SAMMAAN] Non-SUCCESS response:", statusResponse.data);
 
       const emailSummary = formatEmailSummary({
         targetLeadNo,
@@ -576,7 +512,6 @@ exports.checkLeadStatus = async (req, res) => {
         rawResponse: statusResponse.data,
         parsedResponse: null,
       });
-      console.log("\n" + emailSummary + "\n");
 
       return res.status(400).json({
         status: "Error",
@@ -589,16 +524,7 @@ exports.checkLeadStatus = async (req, res) => {
     }
   } catch (err) {
     const elapsed = Date.now() - startTime;
-    console.error("================================================================================");
-    console.error("❌ [SAMMAAN REVERSE STATUS] EXCEPTION in checkLeadStatus:");
-    console.error("Error Message:", err.message);
-    if (err.response) {
-      console.error(`HTTP Status: ${err.response.status}`);
-      console.error("Response Data:", JSON.stringify(err.response.data, null, 2));
-      console.error("Response Headers:", err.response.headers);
-    }
-    console.error("Stack Trace:", err.stack);
-    console.error("================================================================================");
+    console.error("[SAMMAAN] checkLeadStatus error:", err.message, err?.response?.data || "");
 
     const httpStatus = err.response ? `${err.response.status} ${err.response.statusText || ""}`.trim() : "500 Error";
     const emailSummary = formatEmailSummary({
@@ -610,7 +536,6 @@ exports.checkLeadStatus = async (req, res) => {
       rawResponse: err?.response?.data || { message: err.message },
       parsedResponse: null,
     });
-    console.log("\n" + emailSummary + "\n");
 
     return res.status(err.response?.status || 500).json({
       status: "Error",
@@ -694,12 +619,8 @@ exports.uploadSecuredLoanDocument = async (req, res) => {
       }
     );
 
-    console.log("📥 Sammaan Doc Upload Raw Response:", JSON.stringify(docUploadResponse.data));
-
     if (docUploadResponse.data?.Message === "SUCCESS") {
       const docParsed = parseResponseData(docUploadResponse.data.ResponseData, key, iv);
-      console.log("🔓 Sammaan Decrypted Doc Upload Response:", JSON.stringify(docParsed, null, 2));
-
       const payload = docParsed?.Payload;
       const isSuccess = payload?.status?.toLowerCase() === "success";
 
@@ -730,7 +651,7 @@ exports.uploadSecuredLoanDocument = async (req, res) => {
       rawResponse: docUploadResponse.data,
     });
   } catch (error) {
-    console.error("Error in uploadSecuredLoanDocument:", error?.response?.data || error);
+    console.error("[SAMMAAN] uploadSecuredLoanDocument error:", error?.response?.data || error);
     return res.status(500).json({
       status: "Error",
       message: error.message,
@@ -738,4 +659,3 @@ exports.uploadSecuredLoanDocument = async (req, res) => {
     });
   }
 };
-
