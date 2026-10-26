@@ -12,12 +12,12 @@ const Utility = require("../../utility");
 const CustomerDocumentController = {
   //create document inside database
   createDocument: (req, res) => {
-    const payload = req.body;
-    const companyId = req.headers.companyid;
+    const payload = req.body || {};
+    const companyId = req.headers.companyid || req.headers.company_id || payload.company_id || payload.companyId;
     if ( companyId ) {
-      payload.company_id = companyId;
+      payload.company_id = String(companyId);
     } else {
-      console.warn( 'No companyId found in headers for createDocument' );
+      console.warn( 'No companyId found in headers or body for createDocument' );
     }
     return new Promise((resolve, reject) => {
       CustomerDocumentModel.create(payload)
@@ -25,7 +25,8 @@ const CustomerDocumentController = {
           resolve(res.status(200).send(Utility.formatResponse(200, "success")));
         })
         .catch((err) => {
-          resolve(res.status(409).send(Utility.formatResponse(409, err)));
+          console.error('Failed to create customer_document in DB:', err?.message || err);
+          resolve(res.status(409).send(Utility.formatResponse(409, err?.message || err)));
         });
     });
   },
@@ -65,48 +66,20 @@ const CustomerDocumentController = {
   // upload the document to s3 bucket
   uploadDocumentToS3: async (req, res) => {
     try {
-      const { document } = req.files;
-      const { folder } = req.body;
+      const { document } = req.files || {};
+      const { folder } = req.body || {};
 
       // If no document submitted, exit
       if (!document || !folder) {
         return res
           .status(400)
-          .send(Utility.formatResponse(400, "No file uploaded"));
+          .send(Utility.formatResponse(400, "No file uploaded or missing folder"));
       }
-
-      // Validate file type (images, .txt, .doc, .docx)
-      // const allowedMimeTypes = [
-      //   "image/avif",
-      //   "image/jpeg",
-      //   "image/jpg",
-      //   "image/png",
-      //   "image/gif",
-      //   "image/bmp",
-      //   "image/webp",
-      //   "text/plain",
-      //   "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-      //   "application/msword", // .doc
-      //   "application/pdf", // .pdf
-      //   "audio/mpeg", // .mp3
-      //   "audio/wav", // .wav
-      //   "audio/ogg", // .ogg
-      //   "audio/dat", // .dat
-      // ];
-
-      // const isAudioFile = document.mimetype.startsWith("audio/");
-
-      // if (!allowedMimeTypes.includes(document.mimetype) && !isAudioFile) {
-      //   console.error("Invalid MIME type:", document.mimetype);
-      //   return res
-      //     .status(400)
-      //     .send(Utility.formatResponse(400, "Invalid file type"));
-      // }
 
       Utility.uploadToS3(folder, document, res);
     } catch (err) {
-      console.log("err", err);
-      res.status(500).send(Utility.formatResponse(500, err));
+      console.log("uploadDocumentToS3 err:", err);
+      res.status(500).send(Utility.formatResponse(500, err?.message || err));
     }
   },
 
