@@ -304,6 +304,78 @@ const CustomerApplicationController = {
         .send(Utility.formatResponse(500, err.message || "Internal server error"));
     }
   },
+
+  updateApplication: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const payload = req.body;
+      const targetId = id || payload.applicationId || payload.id || payload.customer_application_id;
+
+      if (!targetId) {
+        return res
+          .status(400)
+          .send(Utility.formatResponse(400, "applicationId is required"));
+      }
+
+      const updateData = {};
+      if (payload.amount !== undefined) updateData.amount = payload.amount;
+      if (payload.tenure !== undefined) updateData.tenure = payload.tenure;
+      if (payload.provider !== undefined) updateData.provider = payload.provider;
+      if (payload.loan_type !== undefined || payload.loanType !== undefined) {
+        updateData.loan_type = payload.loan_type || payload.loanType;
+      }
+      if (payload.loan_category !== undefined || payload.loanCategory !== undefined) {
+        updateData.loan_category = payload.loan_category || payload.loanCategory;
+      }
+      if (payload.lead_type !== undefined || payload.leadType !== undefined) {
+        updateData.lead_type = payload.lead_type !== undefined ? payload.lead_type : payload.leadType;
+      }
+      if (payload.case_type !== undefined || payload.caseType !== undefined) {
+        updateData.case_type = payload.case_type || payload.caseType;
+      }
+      if (payload.business_entity_type !== undefined || payload.businessEntityType !== undefined) {
+        updateData.business_entity_type = payload.business_entity_type || payload.businessEntityType;
+      }
+      if (payload.company_official_email !== undefined) {
+        updateData.company_official_email = payload.company_official_email;
+      }
+      if (payload.existing_loans !== undefined || payload.existingLoans !== undefined) {
+        const rawLoans = payload.existing_loans !== undefined ? payload.existing_loans : payload.existingLoans;
+        updateData.existing_loans = typeof rawLoans === 'string' ? rawLoans : JSON.stringify(rawLoans);
+      }
+      if (payload.referral_code !== undefined || payload.referralCode !== undefined) {
+        updateData.referral_code = payload.referral_code || payload.referralCode;
+      }
+
+      const isNumeric = !isNaN(Number(targetId));
+      const whereCondition = isNumeric
+        ? {
+            [Op.or]: [
+              { id: Number(targetId) },
+              { application_no: Number(targetId) }
+            ]
+          }
+        : { id: targetId };
+
+      await CustomerLoanApplication.update(updateData, { where: whereCondition });
+
+      const updated = await CustomerLoanApplication.findOne({ where: whereCondition });
+
+      return res.status(200).send(
+        Utility.formatResponse(200, {
+          success: true,
+          message: "Application updated successfully",
+          applicationId: updated ? updated.id : targetId,
+          application: updated
+        })
+      );
+    } catch (err) {
+      console.error("[updateApplication] Error:", err.message || err);
+      return res
+        .status(500)
+        .send(Utility.formatResponse(500, err.message || "Internal server error"));
+    }
+  },
 };
 
 module.exports = CustomerApplicationController;

@@ -23,6 +23,12 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = (mailOptions) => {
   return new Promise((resolve, reject) => {
+    // Skip gracefully if SMTP password is not configured
+    if (!config.SMTP_PASS) {
+      console.warn('SMTP_PASS is not configured in .env. Skipping email dispatch.');
+      return resolve(null);
+    }
+
     // Validate required fields in mailOptions
     if (!mailOptions.to || !mailOptions.subject || !mailOptions.from) {
       return reject(new Error('Missing required fields: to, subject, or from'));

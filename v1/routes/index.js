@@ -150,6 +150,22 @@ router.post(
   "/check-duplicate-application",
   CustomerApplicationController.checkDuplicateApplication
 );
+router.patch(
+  "/update-application/:id",
+  CustomerApplicationController.updateApplication
+);
+router.patch(
+  "/update-application",
+  CustomerApplicationController.updateApplication
+);
+router.post(
+  "/update-application/:id",
+  CustomerApplicationController.updateApplication
+);
+router.post(
+  "/update-application",
+  CustomerApplicationController.updateApplication
+);
 
 //-----------------------------------LOAN PROVIDER---------------------------------------
 router.get("/get-all-loan-providers", LoanProviderController.getLoanProvider);
