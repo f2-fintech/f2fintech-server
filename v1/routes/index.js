@@ -76,11 +76,9 @@ router.post("/customer-application-by-ai", createApplicationByAI);
 
 //-----------------------------------CUSTOMER---------------------------------------
 router.post("/create-customer", CustomerController.register);
-router.patch(
-  "/update-customer",
-  checkAuthenticated,
-  CustomerController.updateCustomer
-);
+router.patch("/update-customer", CustomerController.updateCustomer);
+router.patch("/update-customer/:id", CustomerController.updateCustomer);
+router.post("/update-customer", CustomerController.updateCustomer);
 router.get("/get-customer", CustomerController.getCustomer);
 router.get("/get-customer/:id", CustomerController.getCustomerById);
 router.post("/login", CustomerController.loginCustomer);
