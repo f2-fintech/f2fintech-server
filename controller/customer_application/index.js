@@ -325,16 +325,22 @@ const CustomerApplicationController = {
         updateData.loan_type = payload.loan_type || payload.loanType;
       }
       if (payload.loan_category !== undefined || payload.loanCategory !== undefined) {
-        updateData.loan_category = payload.loan_category || payload.loanCategory;
+        const cat = payload.loan_category || payload.loanCategory;
+        updateData.loan_category = (cat === 'secured' || cat === 'unsecured') ? cat : null;
       }
       if (payload.lead_type !== undefined || payload.leadType !== undefined) {
-        updateData.lead_type = payload.lead_type !== undefined ? payload.lead_type : payload.leadType;
+        const rawLead = payload.lead_type !== undefined ? payload.lead_type : payload.leadType;
+        const validLeadTypes = ['notion', 'dialler', 'field visit', 'sourcer', 'channel partner', 'ref from customer', 'left employee follow up'];
+        updateData.lead_type = validLeadTypes.includes(rawLead) ? rawLead : null;
       }
       if (payload.case_type !== undefined || payload.caseType !== undefined) {
-        updateData.case_type = payload.case_type || payload.caseType;
+        const rawCase = payload.case_type || payload.caseType;
+        updateData.case_type = (rawCase === 'top_up' || rawCase === 'fresh') ? rawCase : 'fresh';
       }
       if (payload.business_entity_type !== undefined || payload.businessEntityType !== undefined) {
-        updateData.business_entity_type = payload.business_entity_type || payload.businessEntityType;
+        const rawEntity = payload.business_entity_type || payload.businessEntityType;
+        const validEntities = ['sole_proprietorship', 'private_limited', 'llp', 'huf', 'partnership'];
+        updateData.business_entity_type = validEntities.includes(rawEntity) ? rawEntity : null;
       }
       if (payload.company_official_email !== undefined) {
         updateData.company_official_email = payload.company_official_email;

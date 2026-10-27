@@ -154,7 +154,13 @@ const CustomerController = {
   },
 
   updateCustomer: (req, res) => {
-    const payload = req.body;
+    const { id } = req.params;
+    const payload = req.body || {};
+    const targetId = id || payload.id || payload.customer_id || payload.customerId;
+
+    if (!targetId) {
+      return res.status(400).send(Utility.formatResponse(400, "Customer ID is required"));
+    }
 
     return new Promise((resolve, reject) => {
       let updatePromise = Promise.resolve(payload);
@@ -173,9 +179,19 @@ const CustomerController = {
 
       updatePromise
         .then((updatedPayload) => {
+          const updateData = {};
+          if (updatedPayload.name !== undefined) updateData.name = updatedPayload.name;
+          if (updatedPayload.email !== undefined) updateData.email = updatedPayload.email;
+          if (updatedPayload.contact !== undefined) updateData.contact = updatedPayload.contact;
+          if (updatedPayload.dob !== undefined) updateData.dob = updatedPayload.dob;
+          if (updatedPayload.gender !== undefined) updateData.gender = updatedPayload.gender;
+          if (updatedPayload.status !== undefined) updateData.status = updatedPayload.status;
+          if (updatedPayload.password !== undefined) updateData.password = updatedPayload.password;
+          if (updatedPayload.company_id !== undefined) updateData.company_id = updatedPayload.company_id;
+
           CustomerModel.update(
-            { ...updatedPayload },
-            { where: { id: payload.id } }
+            updateData,
+            { where: { id: Number(targetId) } }
           )
             .then(() => {
               resolve(
