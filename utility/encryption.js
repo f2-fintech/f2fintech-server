@@ -25,10 +25,35 @@ function prepareRequestData(jsonData, keyStr, ivStr) {
   return encryptAES256(base64EncodedPlaintext, keyStr, ivStr);
 }
 
+function prepareRequestDataDirectJson(jsonData, keyStr, ivStr) {
+  const jsonStr = JSON.stringify(jsonData);
+  return encryptAES256(jsonStr, keyStr, ivStr);
+}
+
 function parseResponseData(encryptedResponseData, keyStr, ivStr) {
-  const decryptedBase64 = decryptAES256(encryptedResponseData, keyStr, ivStr);
-  const decodedJsonStr = Buffer.from(decryptedBase64, "base64").toString("utf8");
-  return JSON.parse(decodedJsonStr);
+  const decrypted = decryptAES256(encryptedResponseData, keyStr, ivStr);
+  const trimmed = decrypted.trim();
+
+  // 1. Try direct JSON parse first
+  try {
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      return JSON.parse(trimmed);
+    }
+  } catch (e) {
+    // not direct valid JSON, continue to Base64 decode
+  }
+
+  // 2. Check if decrypted string is Base64 encoded JSON
+  try {
+    const decodedJsonStr = Buffer.from(decrypted, "base64").toString("utf8").trim();
+    if (decodedJsonStr.startsWith("{") || decodedJsonStr.startsWith("[")) {
+      return JSON.parse(decodedJsonStr);
+    }
+  } catch (e) {
+    // Not base64 encoded JSON, fall through to direct JSON parse
+  }
+
+  return JSON.parse(decrypted);
 }
 
 async function getBearerToken(clientId, clientSecret) {
@@ -54,6 +79,7 @@ module.exports = {
   encryptAES256,
   decryptAES256,
   prepareRequestData,
+  prepareRequestDataDirectJson,
   parseResponseData,
   getBearerToken,
 };

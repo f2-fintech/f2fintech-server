@@ -76,11 +76,9 @@ router.post("/customer-application-by-ai", createApplicationByAI);
 
 //-----------------------------------CUSTOMER---------------------------------------
 router.post("/create-customer", CustomerController.register);
-router.patch(
-  "/update-customer",
-  checkAuthenticated,
-  CustomerController.updateCustomer
-);
+router.patch("/update-customer", CustomerController.updateCustomer);
+router.patch("/update-customer/:id", CustomerController.updateCustomer);
+router.post("/update-customer", CustomerController.updateCustomer);
 router.get("/get-customer", CustomerController.getCustomer);
 router.get("/get-customer/:id", CustomerController.getCustomerById);
 router.post("/login", CustomerController.loginCustomer);
@@ -149,6 +147,22 @@ router.get(
 router.post(
   "/check-duplicate-application",
   CustomerApplicationController.checkDuplicateApplication
+);
+router.patch(
+  "/update-application/:id",
+  CustomerApplicationController.updateApplication
+);
+router.patch(
+  "/update-application",
+  CustomerApplicationController.updateApplication
+);
+router.post(
+  "/update-application/:id",
+  CustomerApplicationController.updateApplication
+);
+router.post(
+  "/update-application",
+  CustomerApplicationController.updateApplication
 );
 
 //-----------------------------------LOAN PROVIDER---------------------------------------
@@ -295,6 +309,7 @@ router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
 router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
 router.post("/credit-cards/track-click", CreditCardController.trackClick);
 router.post("/credit-cards/create-lead", CreditCardController.createLead);
+router.post("/credit-cards/stateless-bre", CreditCardController.applyStatelessBRE);
 router.get("/credit-cards/leads", CreditCardController.getAllLeads);
 
 //-----------------------------------CIBIL APPLICATIONS TRACKING---------------------------------------
@@ -316,5 +331,9 @@ router.post("/payment/payu/response", PaymentController.handlePayuResponse);
 router.post("/secured-loan", SecuredLoanController.submitSecuredLoan);
 router.get("/admin/secured-loans", SecuredLoanController.getSecuredLoans);
 router.get("/admin/secured-loans/:id/status", SecuredLoanController.checkLeadStatus);
+router.get("/secured-loans", SecuredLoanController.getSecuredLoans);
+router.get("/secured-loans/:id/status", SecuredLoanController.checkLeadStatus);
+router.post("/admin/secured-loans/:id/upload-document", SecuredLoanController.uploadSecuredLoanDocument);
+router.post("/secured-loans/:id/upload-document", SecuredLoanController.uploadSecuredLoanDocument);
 
 module.exports = router;

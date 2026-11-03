@@ -6,23 +6,32 @@
 const CreditCardClickModel = require("../../model/credit_card_click");
 const CreditCardLeadModel = require("../../model/credit_card_lead");
 
-const BANKKARO_BASE_URL = process.env.BANKKARO_BASE_URL;
+const rawBaseUrl = process.env.BANKKARO_BASE_URL || "https://platform.bankkaro.com";
+const BANKKARO_BASE_URL = rawBaseUrl.replace(/\/partner\/?$/, "").replace(/\/$/, "");
+const rawStatelessUrl = process.env.BANKKARO_STATELESS_BASE_URL || "";
+const BANKKARO_STATELESS_BASE_URL = rawStatelessUrl ? rawStatelessUrl.replace(/\/partner\/?$/, "").replace(/\/$/, "") : null;
 const BANKKARO_API_KEY = process.env.BANKKARO_API_KEY;
 
-let cachedPartnerToken = null;
-let tokenExpiresAt = 0;
+// Cache JWT partner tokens per base URL (Production vs UAT)
+const partnerTokenCache = {};
 
 /**
- * Obtain or return cached BankKaro Partner JWT Token
+ * Obtain or return cached BankKaro Partner JWT Token for a given base URL
  */
-async function getPartnerToken() {
+async function getPartnerToken(baseUrl = BANKKARO_BASE_URL) {
+  if (!BANKKARO_API_KEY) {
+    throw new Error("BANKKARO_API_KEY is not defined in environment variables");
+  }
+
+  const cleanBase = baseUrl.replace(/\/partner\/?$/, "").replace(/\/$/, "");
   const now = Date.now();
-  if (cachedPartnerToken && now < tokenExpiresAt - 60000) {
-    return cachedPartnerToken;
+  const cached = partnerTokenCache[cleanBase];
+  if (cached && now < cached.expiresAt - 60000) {
+    return cached.token;
   }
 
   try {
-    const response = await fetch(`${BANKKARO_BASE_URL}/partner/token`, {
+    const response = await fetch(`${cleanBase}/partner/token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,14 +41,16 @@ async function getPartnerToken() {
 
     const data = await response.json();
     if (data.status === "success" && data.data && data.data.jwttoken) {
-      cachedPartnerToken = data.data.jwttoken;
-      tokenExpiresAt = data.data.expiresAt ? new Date(data.data.expiresAt).getTime() : now + 3600000;
-      return cachedPartnerToken;
+      partnerTokenCache[cleanBase] = {
+        token: data.data.jwttoken,
+        expiresAt: data.data.expiresAt ? new Date(data.data.expiresAt).getTime() : now + 3600000,
+      };
+      return partnerTokenCache[cleanBase].token;
     } else {
-      throw new Error(data.message || "Failed to retrieve BankKaro partner token");
+      throw new Error(data.message || `Failed to retrieve BankKaro partner token from ${cleanBase}`);
     }
   } catch (error) {
-    console.error("[BankKaro Token Error]:", error);
+    console.error(`[BankKaro Token Error (${cleanBase})]:`, error.message);
     throw error;
   }
 }
@@ -47,8 +58,9 @@ async function getPartnerToken() {
 /**
  * Helper to fetch from BankKaro API with partner-token header
  */
-async function callBankKaroAPI(endpoint, method = "GET", body = null) {
-  const token = await getPartnerToken();
+async function callBankKaroAPI(endpoint, method = "GET", body = null, baseUrl = BANKKARO_BASE_URL) {
+  const cleanBase = baseUrl.replace(/\/partner\/?$/, "").replace(/\/$/, "");
+  const token = await getPartnerToken(cleanBase);
   const options = {
     method,
     headers: {
@@ -61,8 +73,12 @@ async function callBankKaroAPI(endpoint, method = "GET", body = null) {
     options.body = typeof body === "string" ? body : JSON.stringify(body);
   }
 
-  const response = await fetch(`${BANKKARO_BASE_URL}${endpoint}`, options);
-  return await response.json();
+  const response = await fetch(`${cleanBase}${endpoint}`, options);
+  const data = await response.json();
+  if (data && typeof data === "object") {
+    data._httpStatus = response.status;
+  }
+  return data;
 }
 
 /**
@@ -529,4 +545,183 @@ exports.getAllLeads = async (req, res) => {
     });
   }
 };
+
+/**
+ * POST /api/v1/credit-cards/stateless-bre
+ * Stateless BRE eligibility check (Great.Cards / BankKaro) with internal lead recording
+ */
+exports.applyStatelessBRE = async (req, res) => {
+  try {
+    const {
+      full_name,
+      mobile,
+      email,
+      dob,
+      loan_amount_required,
+      employmentStatus,
+      inhandIncome,
+      salary_recieved_in,
+      company_name,
+      pincode,
+      office_pincode,
+      fetch_credit_consent = true,
+      know_your_credit_score = true,
+      loan_tenure = 12,
+    } = req.body;
+
+    // Validate mandatory fields required by BankKaro Stateless BRE
+    const missingFields = [];
+    if (!dob) missingFields.push("dob");
+    if (!loan_amount_required) missingFields.push("loan_amount_required");
+    if (!employmentStatus) missingFields.push("employmentStatus");
+    if (!inhandIncome) missingFields.push("inhandIncome");
+    if (!salary_recieved_in) missingFields.push("salary_recieved_in");
+    if (!company_name) missingFields.push("company_name");
+    if (!pincode) missingFields.push("pincode");
+    if (!office_pincode) missingFields.push("office_pincode");
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        status: "Error",
+        message: "Validation Failed",
+        missing_fields: missingFields,
+        detail: `The following required fields are missing: ${missingFields.join(", ")}`,
+      });
+    }
+
+    // Capture applicant lead into credit_card_lead model for audit & business records
+    try {
+      const clientIp =
+        req.headers["x-forwarded-for"] ||
+        req.connection?.remoteAddress ||
+        req.socket?.remoteAddress ||
+        "";
+
+      await CreditCardLeadModel.create({
+        full_name: full_name ? String(full_name).trim() : "Guest Applicant",
+        mobile: mobile ? String(mobile).trim() : "9999999999",
+        email: email ? String(email).trim() : "",
+        city: "",
+        pincode: String(pincode).trim(),
+        card_name: "Stateless Instant Offer Application",
+        bank_name: "Multi-Lender BRE",
+        card_type: String(employmentStatus),
+        joining_fee_text: String(loan_amount_required),
+        admin_notes: `Stateless BRE: income=${inhandIncome}, employer=${company_name}, salary_mode=${salary_recieved_in}, office_pincode=${office_pincode}`,
+        ip_address: clientIp.substring(0, 64),
+        status: "initiated",
+      });
+    } catch (leadSaveErr) {
+      console.warn("[Stateless BRE] Lead capture warning (non-fatal):", leadSaveErr.message);
+    }
+
+    // Prepare BankKaro Stateless BRE payload
+    const brePayload = {
+      dob: String(dob).trim(),
+      loan_amount_required: Number(loan_amount_required),
+      employmentStatus: String(employmentStatus).toLowerCase().trim(),
+      inhandIncome: Number(inhandIncome),
+      salary_recieved_in: String(salary_recieved_in).toLowerCase().trim(),
+      company_name: String(company_name).trim(),
+      pincode: String(pincode).trim(),
+      office_pincode: String(office_pincode).trim(),
+      fetch_credit_consent: Boolean(fetch_credit_consent),
+      know_your_credit_score: Boolean(know_your_credit_score),
+      loan_tenure: Number(loan_tenure) || 12,
+    };
+
+    const targetStatelessUrl = BANKKARO_STATELESS_BASE_URL || BANKKARO_BASE_URL;
+
+    let responseData = null;
+    try {
+      // First try bre-stage-advanced for richer priced offers
+      responseData = await callBankKaroAPI(
+        "/partner/loangenius/stateless/bre-stage-advanced",
+        "POST",
+        brePayload,
+        targetStatelessUrl
+      );
+    } catch (advErr) {
+      console.warn("[Stateless BRE] Advanced BRE call error:", advErr.message);
+    }
+
+    // Check if the stateless route is not enabled (HTTP 405) on the current host (e.g. BankKaro PROD route pending activation)
+    const isRouteDisabled =
+      responseData?._httpStatus === 405 ||
+      (responseData?.message && responseData.message.toLowerCase().includes("not allowed"));
+
+    if (isRouteDisabled && targetStatelessUrl !== "https://uat-platform.bankkaro.com") {
+      console.warn("[Stateless BRE] Stateless route not enabled on", targetStatelessUrl, "failing over to UAT gateway...");
+      try {
+        responseData = await callBankKaroAPI(
+          "/partner/loangenius/stateless/bre-stage-advanced",
+          "POST",
+          brePayload,
+          "https://uat-platform.bankkaro.com"
+        );
+      } catch (uatErr) {
+        console.warn("[Stateless BRE] UAT Advanced BRE error:", uatErr.message);
+      }
+    }
+
+    // If advanced didn't return offers or returned an error, fallback to bre-stage-basic
+    if (!responseData || !responseData.data || !responseData.data.offers) {
+      const basicPayload = {
+        dob: brePayload.dob,
+        loan_amount_required: brePayload.loan_amount_required,
+        employmentStatus: brePayload.employmentStatus,
+        inhandIncome: brePayload.inhandIncome,
+        salary_recieved_in: brePayload.salary_recieved_in,
+        company_name: brePayload.company_name,
+        pincode: brePayload.pincode,
+        office_pincode: brePayload.office_pincode,
+      };
+
+      try {
+        const fallbackUrl = (isRouteDisabled || targetStatelessUrl.includes("platform.bankkaro.com"))
+          ? "https://uat-platform.bankkaro.com"
+          : targetStatelessUrl;
+
+        responseData = await callBankKaroAPI(
+          "/partner/loangenius/stateless/bre-stage-basic",
+          "POST",
+          basicPayload,
+          fallbackUrl
+        );
+      } catch (basicErr) {
+        console.error("[Stateless BRE] Basic BRE call failed:", basicErr);
+        return res.status(502).json({
+          status: "Error",
+          message: "Unable to connect to Partner BRE API. Please try again later.",
+          detail: basicErr.message,
+        });
+      }
+    }
+
+    if (responseData && (responseData.status === "success" || responseData.data)) {
+      const data = responseData.data || {};
+      return res.status(200).json({
+        status: "Success",
+        message: "Eligibility evaluated successfully",
+        isEligible: data.isEligible !== false,
+        offers: data.offers || [],
+        inEligibleOffers: data.inEligibleOffers || [],
+      });
+    }
+
+    return res.status(502).json({
+      status: "Error",
+      message: responseData?.message || "Partner API evaluated with non-success response",
+      data: responseData,
+    });
+  } catch (error) {
+    console.error("[applyStatelessBRE Error]:", error);
+    return res.status(500).json({
+      status: "Error",
+      message: "Internal server error during eligibility check",
+      error: error.message,
+    });
+  }
+};
+
 

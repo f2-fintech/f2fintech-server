@@ -78,19 +78,21 @@ const Utility = {
       },
     });
 
+    const cleanFolder = (folder || 'document/file').replace(/\s+/g, '_');
+
     // Set the parameters for the file you want to upload
     const params = {
       Bucket: bucketName,
-      Key: folder,
+      Key: cleanFolder,
       Body: file.data,
-      ContentType: file.mimetype,
+      ContentType: file.mimetype || 'application/octet-stream',
     };
 
     try {
       // Upload the file to S3 using the PutObjectCommand
       const data = await s3Client.send(new PutObjectCommand(params));
       // The uploaded file URL will need to be manually constructed since v3 doesn't directly return a location
-      const fileLocation = `https://${bucketName}.s3.${region}.amazonaws.com/${folder}`;
+      const fileLocation = `https://${bucketName}.s3.${region}.amazonaws.com/${cleanFolder}`;
 
       console.log('File uploaded successfully. File location:', fileLocation);
       if (res) {
@@ -102,10 +104,13 @@ const Utility = {
       // ✅ Otherwise return fileLocation for general usage
       return fileLocation;
     } catch (err) {
-      console.log('Error uploading file:', err);
-      return res.status(500).send(
-        Utility.formatResponse(500, 'Error occurred while uploading the file')
-      );
+      console.log('Error uploading file to S3:', err);
+      if (res) {
+        return res.status(500).send(
+          Utility.formatResponse(500, err.message || 'Error occurred while uploading the file')
+        );
+      }
+      throw err;
     }
   },
 
