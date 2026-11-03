@@ -309,6 +309,7 @@ router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
 router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
 router.post("/credit-cards/track-click", CreditCardController.trackClick);
 router.post("/credit-cards/create-lead", CreditCardController.createLead);
+router.post("/credit-cards/stateless-bre", CreditCardController.applyStatelessBRE);
 router.get("/credit-cards/leads", CreditCardController.getAllLeads);
 
 //-----------------------------------CIBIL APPLICATIONS TRACKING---------------------------------------
