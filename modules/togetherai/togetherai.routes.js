@@ -18,3 +18,4 @@ router.use(optionalAuth);
 router.post("/", controller.handleChat);
 
 module.exports = router;
+

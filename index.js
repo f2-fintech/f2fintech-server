@@ -50,7 +50,7 @@ const corsOptions = {
     if (/^https:\/\/([a-zA-Z0-9_-]+\.)*netlify\.app$/.test(origin)) {
       return callback(null, true);
     }
-    return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    return callback(null, false);
   },
   credentials: true,
   optionSuccessStatus: 200,

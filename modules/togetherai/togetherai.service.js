@@ -65,3 +65,4 @@ Context: ${context || "F2 Fintech provides instant personal loans, business loan
 module.exports = {
   generateChatCompletion,
 };
+

@@ -21,3 +21,4 @@ router.post("/cibil-report", controller.getCibilReport);
 router.post("/proxy-digitap", controller.proxyDigitap);
 
 module.exports = router;
+
