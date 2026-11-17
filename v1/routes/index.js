@@ -30,6 +30,10 @@ const LeadsInfoDocumentController = require("../../controller/leads_info_documen
 const EligibilityBasicController = require("../../controller/eligibility_criteria/index");
 const ProductLeadsController = require("../../controller/our_products/index");
 const ChatController = require("../../controller/chatbotController/index");
+const bankkaroRoutes = require("../../modules/bankkaro/bankkaro.routes");
+const digitapRoutes = require("../../modules/digitap/digitap.routes");
+const digitapController = require("../../modules/digitap/digitap.controller");
+const togetheraiRoutes = require("../../modules/togetherai/togetherai.routes");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
 const SitemapController = require("../../controller/sitemap/index");
@@ -39,7 +43,6 @@ const CareersController = require("../../controller/careers/index");
 const CustomerLoanInquiryController = require("../../controller/customer_loan_inquiry/index");
 const RealtorController = require("../../controller/realtor/index");
 const DsaController = require("../../controller/dsa/index");
-const CreditCardController = require("../../controller/credit_cards/index");
 const CibilApplicationController = require("../../controller/cibil_application/index");
 const PaymentController = require("../../controller/payment/index");
 const SecuredLoanController = require("../../controller/secured_loan_controller/index");
@@ -208,31 +211,9 @@ router.get("/get-send-queries", SendQueryController.getSendQueries);
 router.post("/get-cibil-score", getCibilScore);
 router.post("/check-cibil", checkCibilA2Z);
 
-//-----------------------------------DIGITAP PROXY (CORS bypass for production)---------------------------------------
-router.post("/proxy-digitap", async (req, res) => {
-  const axios = require("axios");
-  const DIGITAP_AUTH = Buffer.from(
-    `${process.env.DIGITAP_CLIENT_ID}:${process.env.DIGITAP_SECRET}`
-  ).toString("base64");
-  try {
-    const response = await axios.post(
-      "https://svc.digitap.ai/credit_analytics/request",
-      req.body,
-      {
-        headers: {
-          Authorization: `Basic ${DIGITAP_AUTH}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 30000,
-      }
-    );
-    return res.status(response.status).json(response.data);
-  } catch (err) {
-    const status = err?.response?.status || 500;
-    const data = err?.response?.data || { message: err.message };
-    return res.status(status).json(data);
-  }
-});
+//-----------------------------------DIGITAP MODULE---------------------------------------
+router.use("/digitap", digitapRoutes);
+router.post("/proxy-digitap", digitapController.proxyDigitap);
 router.post('/create-leads-info-elegibility', EligibilityBasicController.createEligibilityBasic);
 router.put('/update-leads-info-elegibility/:id', EligibilityBasicController.updateEligibilityBasic);
 router.get("/get-leads-info-elegibility/:id", EligibilityBasicController.getLeadInfoById);
@@ -261,9 +242,9 @@ router.post("/channel-partner", ChannelPartnerController.createChannelPartner);
 router.post("/careers", CareersController.createCareer);
 
 
-//-----------------------------------CHAT BOT---------------------------------------
-// router.post('/chat', ChatController.handleChat);
-router.post('/api/chat', ChatController.handleChat);
+//-----------------------------------CHAT BOT (TOGETHER AI MODULE)---------------------------------------
+router.use('/chat', togetheraiRoutes);
+router.use('/api/chat', togetheraiRoutes);
 
 
 //-----------------------------------BLOGS---------------------------------------
@@ -300,17 +281,9 @@ router.get("/get-realtors", RealtorController.getAllRealtors);
 router.post("/dsa", DsaController.createDsa);
 router.get("/get-dsas", DsaController.getAllDsas);
 
-//-----------------------------------CREDIT CARDS---------------------------------------
-router.get("/credit-cards", CreditCardController.getAllCards);
-router.get("/credit-cards/popular", CreditCardController.getPopularCards);
-router.get("/credit-cards/init-bundle", CreditCardController.getInitBundle);
-router.get("/credit-cards/card/:alias", CreditCardController.getCardByAlias);
-router.post("/credit-cards/calculate", CreditCardController.calculateSpends);
-router.post("/credit-cards/eligibility", CreditCardController.checkEligibility);
-router.post("/credit-cards/track-click", CreditCardController.trackClick);
-router.post("/credit-cards/create-lead", CreditCardController.createLead);
-router.post("/credit-cards/stateless-bre", CreditCardController.applyStatelessBRE);
-router.get("/credit-cards/leads", CreditCardController.getAllLeads);
+//-----------------------------------CREDIT CARDS (BANKKARO MODULE)---------------------------------------
+router.use("/credit-cards", bankkaroRoutes);
+router.use("/cards", bankkaroRoutes);
 
 //-----------------------------------CIBIL APPLICATIONS TRACKING---------------------------------------
 router.post("/record-cibil-application", CibilApplicationController.recordCibilApplication);
