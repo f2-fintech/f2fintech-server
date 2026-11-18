@@ -48,6 +48,72 @@ async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
   return { token, UniqueID, key, iv };
 }
 
+function formatEmailSummary({
+  apiType = "Lead Push API",
+  apiUrlName = "AggregatorLeads-postAggregators",
+  targetLeadNo,
+  salesforceUniqueId,
+  middlewareUrl,
+  httpStatus,
+  statusPayload,
+  requestEnvelope,
+  rawResponse,
+  parsedResponse,
+}) {
+  const border = "================================================================================";
+  const divider = "--------------------------------------------------------------------------------";
+  const sfId =
+    salesforceUniqueId ||
+    statusPayload?.UniqueId ||
+    requestEnvelope?.UniqueId ||
+    parsedResponse?.Payload?.UniqueId ||
+    parsedResponse?.Payload?.UniqueID ||
+    parsedResponse?.UniqueId ||
+    "N/A";
+
+  const lines = [
+    border,
+    "📧 [READY-TO-MAIL REPORT FOR SAMMAAN TEAM]",
+    border,
+    "Hi Team,",
+    "",
+    `Please find below the requested details for the ${apiType}:`,
+    "",
+    `1. Target Lead Number : ${targetLeadNo || "N/A"}`,
+    `2. Salesforce UniqueID: ${sfId} (18-digit Lead Unique ID)`,
+    `3. Session UniqueID   : ${requestEnvelope?.UniqueID || "N/A"} (Session ID from getUniqueID API)`,
+    `4. HTTP Status Code   : ${httpStatus || "N/A"}`,
+    `5. Middleware Endpoint: ${middlewareUrl || "N/A"}`,
+    `6. APIURL Name        : ${apiUrlName}`,
+    `7. Timestamp (UTC)    : ${new Date().toISOString()}`,
+    "",
+    divider,
+    "A. PLAINTEXT (DECRYPTED) REQUEST PAYLOAD:",
+    divider,
+    JSON.stringify(statusPayload, null, 2),
+    "",
+    divider,
+    "B. ENCRYPTED REQUEST ENVELOPE (Sent to Sammaan Gateway):",
+    divider,
+    JSON.stringify(requestEnvelope, null, 2),
+    "",
+    divider,
+    "C. RAW ENVELOPE RESPONSE (Received from Sammaan Gateway):",
+    divider,
+    `HTTP Status: ${httpStatus}`,
+    JSON.stringify(rawResponse, null, 2),
+    "",
+    divider,
+    "D. PLAINTEXT (DECRYPTED) RESPONSE PAYLOAD:",
+    divider,
+    parsedResponse
+      ? JSON.stringify(parsedResponse, null, 2)
+      : "N/A (Response was not encrypted / Gateway returned plaintext error or non-SUCCESS message)",
+    border,
+  ];
+  return lines.join("\n");
+}
+
 exports.submitSecuredLoan = async (req, res) => {
   try {
     const {
@@ -115,16 +181,20 @@ exports.submitSecuredLoan = async (req, res) => {
     let leadId = null;
     let mainApiResponse = null;
     let salesforceUniqueId = null;
+    let parsedResponse = null;
+
+    const leadPushEnvelope = {
+      ConsumerSystemName: "F2Fintech",
+      UniqueID,
+      RequestData: encryptedData,
+      APIURL: "AggregatorLeads-postAggregators",
+      ExistingAPIMethod: "POST",
+    };
+
     try {
       mainApiResponse = await axios.post(
         creds.middlewareUrl,
-        {
-          ConsumerSystemName: "F2Fintech",
-          UniqueID,
-          RequestData: encryptedData,
-          APIURL: "AggregatorLeads-postAggregators",
-          ExistingAPIMethod: "POST",
-        },
+        leadPushEnvelope,
         {
           headers: {
             MessageId: messageId2,
@@ -137,7 +207,7 @@ exports.submitSecuredLoan = async (req, res) => {
       );
 
       if (mainApiResponse.data?.Message === "SUCCESS") {
-        const parsedResponse = parseResponseData(mainApiResponse.data.ResponseData, key, iv);
+        parsedResponse = parseResponseData(mainApiResponse.data.ResponseData, key, iv);
 
         leadId = parsedResponse?.Payload?.LeadId || parsedResponse?.Payload?.LeadNo || parsedResponse?.LeadId;
         salesforceUniqueId =
@@ -152,22 +222,64 @@ exports.submitSecuredLoan = async (req, res) => {
     } catch (leadErr) {
       const errMsg = leadErr?.response?.data || leadErr?.response?.status || leadErr.message;
       console.error("[SAMMAAN] Lead Push API failed:", errMsg);
+      const failedEmailSummary = formatEmailSummary({
+        apiType: "Lead Creation / Push API",
+        apiUrlName: "AggregatorLeads-postAggregators",
+        targetLeadNo: "N/A",
+        middlewareUrl: creds.middlewareUrl,
+        httpStatus: leadErr?.response ? `${leadErr.response.status} ${leadErr.response.statusText || ""}`.trim() : "502 Gateway Error",
+        statusPayload: innerPayload,
+        requestEnvelope: leadPushEnvelope,
+        rawResponse: leadErr?.response?.data || { error: errMsg },
+        parsedResponse: null,
+      });
+
       return res.status(502).json({
         status: "Error",
         message: "Failed to create lead on Sammaan Capital. Please try again.",
         detail: errMsg,
+        emailReadySummary: failedEmailSummary,
+        leadPushEmailSummary: failedEmailSummary,
       });
     }
 
     // 4. Sammaan Lead creation failed (non-exception, bad response)
     if (!leadId) {
       console.error("[SAMMAAN] Did not return a Lead ID. Response:", mainApiResponse?.data);
+      const failedEmailSummary = formatEmailSummary({
+        apiType: "Lead Creation / Push API",
+        apiUrlName: "AggregatorLeads-postAggregators",
+        targetLeadNo: "N/A",
+        middlewareUrl: creds.middlewareUrl,
+        httpStatus: `${mainApiResponse?.status || 400} (No LeadId Returned)`,
+        statusPayload: innerPayload,
+        requestEnvelope: leadPushEnvelope,
+        rawResponse: mainApiResponse?.data || "No LeadId in decrypted payload",
+        parsedResponse: parsedResponse || null,
+      });
+
       return res.status(400).json({
         status: "Error",
         message: "Sammaan Capital did not return a Lead ID. Lead not saved.",
         detail: mainApiResponse?.data || "No LeadId in decrypted payload",
+        emailReadySummary: failedEmailSummary,
+        leadPushEmailSummary: failedEmailSummary,
       });
     }
+
+    // Lead Push Ready-To-Mail Report
+    const leadPushEmailSummary = formatEmailSummary({
+      apiType: "Lead Push API",
+      apiUrlName: "AggregatorLeads-postAggregators",
+      targetLeadNo: leadId,
+      salesforceUniqueId: salesforceUniqueId,
+      middlewareUrl: creds.middlewareUrl,
+      httpStatus: `${mainApiResponse?.status || 200} ${mainApiResponse?.statusText || "OK"}`.trim(),
+      statusPayload: innerPayload,
+      requestEnvelope: leadPushEnvelope,
+      rawResponse: mainApiResponse?.data,
+      parsedResponse,
+    });
 
     // 5. Save to DB — Sammaan confirmed the lead
     const securedLoan = await SecuredLoan.create({
@@ -254,7 +366,11 @@ exports.submitSecuredLoan = async (req, res) => {
       message: "Lead created successfully in Sammaan Capital",
       leadId: leadId,
       externalLeadId: leadId,
+      salesforceUniqueId: salesforceUniqueId || null,
       data: securedLoan,
+      emailReadySummary: leadPushEmailSummary,
+      leadPushEmailSummary,
+      leadPushData: parsedResponse,
     });
 
   } catch (error) {
@@ -272,60 +388,6 @@ exports.getSecuredLoans = async (req, res) => {
     return res.status(500).json({ status: "Error", message: error.message });
   }
 };
-
-function formatEmailSummary({
-  targetLeadNo,
-  middlewareUrl,
-  httpStatus,
-  statusPayload,
-  requestEnvelope,
-  rawResponse,
-  parsedResponse,
-}) {
-  const border = "================================================================================";
-  const divider = "--------------------------------------------------------------------------------";
-  const lines = [
-    border,
-    "📧 [READY-TO-MAIL REPORT FOR SAMMAAN TEAM]",
-    border,
-    "Hi Team,",
-    "",
-    "Please find below the requested details for the Reverse Status Check API:",
-    "",
-    `1. Target Lead Number : ${targetLeadNo || "N/A"}`,
-    `2. Salesforce UniqueID: ${statusPayload?.UniqueId || "N/A"} (18-digit Lead Unique ID)`,
-    `3. Session UniqueID   : ${requestEnvelope?.UniqueID || "N/A"} (Session ID from getUniqueID API)`,
-    `4. HTTP Status Code   : ${httpStatus || "N/A"}`,
-    `5. Middleware Endpoint: ${middlewareUrl || "N/A"}`,
-    `6. APIURL Name        : NewLeadModuleAPI-postReversestatuscheck`,
-    `7. Timestamp (UTC)    : ${new Date().toISOString()}`,
-    "",
-    divider,
-    "A. PLAINTEXT (DECRYPTED) REQUEST PAYLOAD:",
-    divider,
-    JSON.stringify(statusPayload, null, 2),
-    "",
-    divider,
-    "B. ENCRYPTED REQUEST ENVELOPE (Sent to Sammaan Gateway):",
-    divider,
-    JSON.stringify(requestEnvelope, null, 2),
-    "",
-    divider,
-    "C. RAW ENVELOPE RESPONSE (Received from Sammaan Gateway):",
-    divider,
-    `HTTP Status: ${httpStatus}`,
-    JSON.stringify(rawResponse, null, 2),
-    "",
-    divider,
-    "D. PLAINTEXT (DECRYPTED) RESPONSE PAYLOAD:",
-    divider,
-    parsedResponse
-      ? JSON.stringify(parsedResponse, null, 2)
-      : "N/A (Response was not encrypted / Gateway returned plaintext error or non-SUCCESS message)",
-    border,
-  ];
-  return lines.join("\n");
-}
 
 exports.checkLeadStatus = async (req, res) => {
   const { id } = req.params;
