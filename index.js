@@ -12,6 +12,7 @@ const dotenv = require('dotenv');
 
 const config = require("./config");
 const rateLimiter = require("./utility/rateLimiter");
+const { validateRequiredSecrets } = require("./config/envValidator");
 const v1Routes = require("./v1/routes");
 const { passport } = require("./config/passportConfig");
 const { connectToMysql } = require("./db");
@@ -19,18 +20,38 @@ const { connectToMysql } = require("./db");
 // Load environment variables.....
 dotenv.config();
 
+// Fail fast on startup if any required provider secret is missing
+validateRequiredSecrets();
+
 const app = express();
 
-// Configure CORS
+// Configure CORS: allow localhost for dev, production domains, and Netlify domains
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:5174",
+  "https://f2fintech.com",
+  "https://www.f2fintech.com",
+  "https://f2fintech.in",
+  "https://www.f2fintech.in",
+];
+
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:5173",
-    "https://f2fintech.com",
-  ],
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. mobile apps, server-to-server, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    // Allow Netlify deployment domains (*.netlify.app)
+    if (/^https:\/\/([a-zA-Z0-9_-]+\.)*netlify\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    return callback(null, false);
+  },
   credentials: true,
   optionSuccessStatus: 200,
 };
