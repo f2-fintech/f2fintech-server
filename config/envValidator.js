@@ -42,6 +42,15 @@ function validateRequiredSecrets() {
   }
 
   if (missing.length > 0) {
+    if (!isProduction) {
+      console.warn(
+        `[Startup Warning] Running in ${process.env.NODE_ENV || "local"} environment. Missing optional server secret(s): ${missing.join(
+          ", "
+        )}. Server started in development mode without these secrets.`
+      );
+      return;
+    }
+
     const errorMsg = `[Startup Error] Missing required server environment variable(s): ${missing.join(
       ", "
     )}. Server cannot start without these secrets.`;

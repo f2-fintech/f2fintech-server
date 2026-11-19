@@ -262,27 +262,48 @@ exports.checkEligibility = async (req, res) => {
 
 /**
  * POST /api/v1/credit-cards/stateless-bre
+ * Stateless BRE Advanced evaluation
  */
 exports.applyStatelessBRE = async (req, res) => {
   try {
     const payload = req.body || {};
-    if (!payload.loan_amount_required || !payload.inhandIncome) {
+    
+    // Validate required fields
+    const missing = [];
+    if (!payload.dob) missing.push("dob");
+    if (!payload.loan_amount_required) missing.push("loan_amount_required");
+    if (!payload.employmentStatus) missing.push("employmentStatus");
+    if (!payload.inhandIncome) missing.push("inhandIncome");
+    if (!payload.company_name) missing.push("company_name");
+    if (!payload.pincode) missing.push("pincode");
+
+    if (missing.length > 0) {
       return res.status(400).json({
         status: "Error",
-        message: "loan_amount_required and inhandIncome are required",
+        message: `Validation failed: missing required field(s): ${missing.join(", ")}`,
+        missingFields: missing,
       });
     }
 
     const normalizedBRE = {
-      dob: payload.dob || "1995-01-01",
+      dob: String(payload.dob).trim(),
       loan_amount_required: Number(payload.loan_amount_required),
-      employmentStatus: String(payload.employmentStatus || "salaried").toLowerCase(),
+      employmentStatus: String(payload.employmentStatus || "salaried").toLowerCase().trim(),
       inhandIncome: Number(payload.inhandIncome),
-      salary_recieved_in: String(payload.salary_recieved_in || "bank").toLowerCase(),
-      company_name: String(payload.company_name || "Private Company"),
-      pincode: String(payload.pincode || "110001"),
-      office_pincode: String(payload.office_pincode || payload.pincode || "110001"),
+      salary_recieved_in: String(payload.salary_recieved_in || "bank").toLowerCase().trim(),
+      company_name: String(payload.company_name).trim(),
+      pincode: String(payload.pincode).trim(),
+      office_pincode: String(payload.office_pincode || payload.pincode).trim(),
+      fetch_credit_consent: payload.fetch_credit_consent !== undefined ? Boolean(payload.fetch_credit_consent) : true,
+      know_your_credit_score: payload.know_your_credit_score !== undefined ? Boolean(payload.know_your_credit_score) : true,
     };
+
+    if (payload.loan_tenure) {
+      normalizedBRE.loan_tenure = Number(payload.loan_tenure);
+    }
+
+    // Safe sanitized logging (PII redacted)
+    console.log("[BankKaroController.applyStatelessBRE] Evaluating BRE for loan amount:", normalizedBRE.loan_amount_required, "tenure:", normalizedBRE.loan_tenure || 12);
 
     const data = await bankkaroService.applyStatelessBRE(normalizedBRE);
     return res.status(200).json({
@@ -292,9 +313,11 @@ exports.applyStatelessBRE = async (req, res) => {
     });
   } catch (error) {
     console.error("[BankKaroController.applyStatelessBRE Error]:", error.message);
-    return res.status(500).json({
+    const statusCode = error.status || 500;
+    return res.status(statusCode).json({
       status: "Error",
-      message: "Failed to evaluate pre-approved offers.",
+      message: error.responseData?.message || error.message || "Failed to evaluate pre-approved offers.",
+      data: error.responseData?.data || null,
     });
   }
 };
