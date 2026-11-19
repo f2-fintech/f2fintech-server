@@ -63,11 +63,11 @@ async function getPartnerToken(baseUrl = BANKKARO_BASE_URL) {
 }
 
 /**
- * Generic outbound caller with partner token
+ * Generic outbound caller with partner token and 401 retry
  */
-async function callBankKaro(endpoint, method = "GET", body = null, baseUrl = BANKKARO_BASE_URL) {
+async function callBankKaro(endpoint, method = "GET", body = null, baseUrl = BANKKARO_BASE_URL, retryCount = 0) {
   const cleanBase = baseUrl.replace(/\/partner\/?$/, "").replace(/\/$/, "");
-  const token = await getPartnerToken(cleanBase);
+  let token = await getPartnerToken(cleanBase);
 
   try {
     const config = {
@@ -77,7 +77,7 @@ async function callBankKaro(endpoint, method = "GET", body = null, baseUrl = BAN
         "partner-token": token,
         "Content-Type": "application/json",
       },
-      timeout: 20000,
+      timeout: 25000,
     };
 
     if (body && (method === "POST" || method === "PUT" || method === "PATCH")) {
@@ -87,8 +87,23 @@ async function callBankKaro(endpoint, method = "GET", body = null, baseUrl = BAN
     const response = await axios(config);
     return response.data;
   } catch (error) {
-    console.error(`[BankKaro Service] Error on ${endpoint}:`, error.message);
-    throw new Error("Card service provider request failed.");
+    // On 401 "token expired", invalidate cache and retry once
+    if (error.response?.status === 401 && retryCount === 0) {
+      console.warn(`[BankKaro Service] 401 token expired on ${endpoint}. Refreshing token and retrying...`);
+      delete partnerTokenCache[cleanBase];
+      return callBankKaro(endpoint, method, body, baseUrl, retryCount + 1);
+    }
+
+    // Attach response status and data to custom error for upstream handling
+    const status = error.response?.status;
+    const responseData = error.response?.data;
+    const customErr = new Error(
+      responseData?.message || responseData?.data || `BankKaro request failed with status ${status || "unknown"}`
+    );
+    customErr.status = status;
+    customErr.responseData = responseData;
+    console.error(`[BankKaro Service] Error on ${endpoint}: Status ${status || "unknown"}, Message: ${customErr.message}`);
+    throw customErr;
   }
 }
 
@@ -135,16 +150,40 @@ async function checkEligibility(payload) {
 }
 
 /**
- * Apply Stateless BRE
+ * Apply Stateless BRE (Advanced stage with priced offers)
  */
 async function applyStatelessBRE(payload) {
   const targetBase = BANKKARO_STATELESS_BASE_URL || BANKKARO_BASE_URL;
-  return callBankKaro(
-    "/partner/loangenius/stateless/bre-stage-basic",
-    "POST",
-    payload,
-    targetBase
-  );
+  try {
+    return await callBankKaro(
+      "/partner/loangenius/stateless/bre-stage-advanced",
+      "POST",
+      payload,
+      targetBase
+    );
+  } catch (error) {
+    // If advanced route returns 405 (not enabled for key), try fallback to basic
+    if (error.status === 405) {
+      console.warn("[BankKaro Service] Advanced BRE 405: attempting fallback to basic BRE...");
+      const basicPayload = {
+        dob: payload.dob,
+        loan_amount_required: payload.loan_amount_required,
+        employmentStatus: payload.employmentStatus,
+        inhandIncome: payload.inhandIncome,
+        salary_recieved_in: payload.salary_recieved_in,
+        company_name: payload.company_name,
+        pincode: payload.pincode,
+        office_pincode: payload.office_pincode,
+      };
+      return await callBankKaro(
+        "/partner/loangenius/stateless/bre-stage-basic",
+        "POST",
+        basicPayload,
+        targetBase
+      );
+    }
+    throw error;
+  }
 }
 
 module.exports = {
