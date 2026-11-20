@@ -8,6 +8,7 @@
 const bankkaroService = require("./bankkaro.service");
 const CreditCardClickModel = require("../../model/credit_card_click");
 const CreditCardLeadModel = require("../../model/credit_card_lead");
+const LeadsInfoModel = require("../../model/leads_info/leads_info");
 
 /**
  * Format affiliate tracking URL with unique click_id and customer_id
@@ -304,6 +305,46 @@ exports.applyStatelessBRE = async (req, res) => {
 
     // Safe sanitized logging (PII redacted)
     console.log("[BankKaroController.applyStatelessBRE] Evaluating BRE for loan amount:", normalizedBRE.loan_amount_required, "tenure:", normalizedBRE.loan_tenure || 12);
+
+    // Auto-create lead in leads_info table with differentiator provider = 'bankkaro'
+    try {
+      const applicantName = payload.name ? String(payload.name).trim() : null;
+      const applicantPhone = payload.phone || payload.contact ? String(payload.phone || payload.contact).trim() : null;
+      const applicantEmail = payload.email ? String(payload.email).trim() : null;
+      const empStatus = String(payload.employmentStatus || "salaried").toLowerCase().trim();
+      const personaVal = empStatus === "self_employed" ? "self_employed" : "salaried";
+      const tenureMonths = Number(payload.loan_tenure) || 12;
+
+      const addressMetadata = [
+        `Company: ${payload.company_name || "N/A"}`,
+        `Office Pincode: ${payload.office_pincode || payload.pincode}`,
+        `Salary Mode: ${payload.salary_recieved_in || "bank"}`,
+      ].join(" | ");
+
+      const savedLead = await LeadsInfoModel.create({
+        provider: "bankkaro",
+        name: applicantName,
+        phone: applicantPhone,
+        email: applicantEmail,
+        loan_category: "Personal Loan",
+        product: "personal_loan",
+        amount: String(payload.loan_amount_required),
+        requested_limit: Number(payload.loan_amount_required) || null,
+        tenure_months: tenureMonths,
+        dob: String(payload.dob).trim(),
+        employment_type: empStatus,
+        persona: personaVal,
+        income: String(payload.inhandIncome),
+        declared_income: Number(payload.inhandIncome) || null,
+        pincode: String(payload.pincode).trim(),
+        company_registration_type: payload.company_name ? String(payload.company_name).slice(0, 50) : null,
+        address: addressMetadata,
+        cibil: payload.know_your_credit_score ? "knows_score" : "does_not_know_score",
+      });
+      console.log("[BankKaroController.applyStatelessBRE] Lead successfully recorded in leads_info with ID:", savedLead?.id, "provider: bankkaro");
+    } catch (leadErr) {
+      console.error("[BankKaroController.applyStatelessBRE] Non-blocking warning: Failed to record lead in leads_info:", leadErr.message);
+    }
 
     const data = await bankkaroService.applyStatelessBRE(normalizedBRE);
     return res.status(200).json({

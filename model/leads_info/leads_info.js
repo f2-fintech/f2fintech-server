@@ -7,19 +7,19 @@ const LeadsInfoModel = sequelize.define(
   {
     name: {
       type: Sequelize.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     phone: {
       type: Sequelize.STRING(15),
-      allowNull: false,
+      allowNull: true,
     },
     email: {
       type: Sequelize.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     persona: {
       type: Sequelize.STRING, // Or ENUM if types are defined
-      allowNull: false,
+      allowNull: true,
     },
     degree: {
       type: Sequelize.STRING,
@@ -165,6 +165,18 @@ const LeadsInfoModel = sequelize.define(
     },
     requested_emi: {
       type: Sequelize.STRING,
+    },
+    amount: {
+      type: Sequelize.STRING(50),
+    },
+    income: {
+      type: Sequelize.STRING(50),
+    },
+    pan: {
+      type: Sequelize.STRING(50),
+    },
+    cibil: {
+      type: Sequelize.TEXT,
     },
     provider: {
       type: Sequelize.STRING,
