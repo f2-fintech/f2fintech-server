@@ -308,7 +308,7 @@ exports.applyStatelessBRE = async (req, res) => {
 
     // Auto-create lead in leads_info table with differentiator provider = 'bankkaro'
     try {
-      const applicantName = payload.name ? String(payload.name).trim() : null;
+      const leadName = payload.company_name ? String(payload.company_name).trim() : (payload.name ? String(payload.name).trim() : "N/A");
       const applicantPhone = payload.phone || payload.contact ? String(payload.phone || payload.contact).trim() : null;
       const applicantEmail = payload.email ? String(payload.email).trim() : null;
       const empStatus = String(payload.employmentStatus || "salaried").toLowerCase().trim();
@@ -316,14 +316,13 @@ exports.applyStatelessBRE = async (req, res) => {
       const tenureMonths = Number(payload.loan_tenure) || 12;
 
       const addressMetadata = [
-        `Company: ${payload.company_name || "N/A"}`,
-        `Office Pincode: ${payload.office_pincode || payload.pincode}`,
-        `Salary Mode: ${payload.salary_recieved_in || "bank"}`,
-      ].join(" | ");
+        payload.office_pincode ? `Office Pincode: ${payload.office_pincode}` : null,
+        payload.salary_recieved_in ? `Salary Mode: ${payload.salary_recieved_in}` : null,
+      ].filter(Boolean).join(" | ") || null;
 
       const savedLead = await LeadsInfoModel.create({
         provider: "bankkaro",
-        name: applicantName,
+        name: leadName,
         phone: applicantPhone,
         email: applicantEmail,
         loan_category: "Personal Loan",
@@ -337,11 +336,11 @@ exports.applyStatelessBRE = async (req, res) => {
         income: String(payload.inhandIncome),
         declared_income: Number(payload.inhandIncome) || null,
         pincode: String(payload.pincode).trim(),
-        company_registration_type: payload.company_name ? String(payload.company_name).slice(0, 50) : null,
+        company_registration_type: null,
         address: addressMetadata,
         cibil: payload.know_your_credit_score ? "knows_score" : "does_not_know_score",
       });
-      console.log("[BankKaroController.applyStatelessBRE] Lead successfully recorded in leads_info with ID:", savedLead?.id, "provider: bankkaro");
+      console.log("[BankKaroController.applyStatelessBRE] Lead successfully recorded in leads_info with ID:", savedLead?.id, "name:", leadName, "provider: bankkaro");
     } catch (leadErr) {
       console.error("[BankKaroController.applyStatelessBRE] Non-blocking warning: Failed to record lead in leads_info:", leadErr.message);
     }
