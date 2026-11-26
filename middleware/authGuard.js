@@ -6,6 +6,7 @@
 
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const CustomerModel = require("../model/customer");
 let firebaseAdmin = null;
 
 try {
@@ -103,9 +104,60 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+/**
+ * Strict Admin authorization guard: verifies token and checks DB role === 'admin'
+ */
+const requireAdmin = async (req, res, next) => {
+  try {
+    const authResult = await verifyUserToken(req);
+    if (!authResult.authenticated || !authResult.user) {
+      return res.status(401).json({
+        success: false,
+        error: "Authentication required for admin access.",
+      });
+    }
+
+    const userId = authResult.user.id;
+    let role = authResult.user.role;
+    if (userId) {
+      const dbUser = await CustomerModel.findByPk(userId, {
+        attributes: ["id", "role", "status", "company_id"],
+      });
+      if (!dbUser || dbUser.status === "inactive") {
+        return res.status(403).json({
+          success: false,
+          error: "Account is inactive or not authorized.",
+        });
+      }
+      role = dbUser.role;
+      req.user = {
+        ...authResult.user,
+        id: dbUser.id,
+        role: dbUser.role,
+        company_id: dbUser.company_id,
+      };
+    }
+
+    if (String(role || "").toLowerCase().trim() !== "admin") {
+      return res.status(403).json({
+        success: false,
+        error: "Administrator privileges required.",
+      });
+    }
+
+    return next();
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: "Authorization check failed.",
+    });
+  }
+};
+
 module.exports = {
   requireAuth,
   optionalAuth,
+  requireAdmin,
   verifyUserToken,
 };
 
