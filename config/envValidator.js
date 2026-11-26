@@ -14,26 +14,10 @@ function validateRequiredSecrets() {
     missing.push("BANKKARO_BASE_URL");
   }
 
-  // Digitap / Bureau
+  // TimbleGlance / Experian Bureau V2
   const isProduction = process.env.NODE_ENV === "production";
-  const digitapApiKey =
-    process.env.DIGITAP_API_KEY ||
-    (isProduction
-      ? process.env.DIGITAP_PRODUCTION_KEY
-      : process.env.DIGITAP_STAGING_KEY || process.env.DIGITAP_PRODUCTION_KEY);
-
-  if (!digitapApiKey) {
-    missing.push(
-      isProduction
-        ? "DIGITAP_API_KEY or DIGITAP_PRODUCTION_KEY"
-        : "DIGITAP_API_KEY or DIGITAP_STAGING_KEY"
-    );
-  }
-  if (!process.env.DIGITAP_CLIENT_ID) {
-    missing.push("DIGITAP_CLIENT_ID");
-  }
-  if (!process.env.DIGITAP_SECRET) {
-    missing.push("DIGITAP_SECRET");
+  if (!process.env.TIMBLEGLANCE_API_KEY) {
+    missing.push("TIMBLEGLANCE_API_KEY");
   }
 
   // Together AI
