@@ -1,153 +1,269 @@
 /**
- * Digitap Service - Outbound HTTP Integration
- * Encapsulates Experian Credit Analytics via Digitap and Befisc / SmartAuth Bureau pulls.
- * Secrets never leave the server; keys and full upstream headers are never logged.
+ * Bureau Service - Outbound HTTP Integration (TimbleGlance Experian Bureau V2)
+ * Secrets never leave the server; keys, PII, and upstream auth headers are never logged.
  * Copyright © 2024-2026, F2FINTECH. ALL RIGHTS RESERVED.
  */
 
 const axios = require("axios");
 
-const isProduction = process.env.NODE_ENV === "production";
+const DEFAULT_TIMBLEGLANCE_URL = "https://www.timbleglance.com/api/Experian_Bureau_V2";
 
-// Get Digitap API key (Befisc / SmartAuth) based on environment
-function getDigitapApiKey() {
-  if (process.env.DIGITAP_API_KEY) {
-    return process.env.DIGITAP_API_KEY;
+function getTimbleGlanceConfig() {
+  const apiKey = process.env.TIMBLEGLANCE_API_KEY;
+  if (!apiKey) {
+    throw new Error("TIMBLEGLANCE_API_KEY is missing from server environment");
   }
-  if (isProduction) {
-    return process.env.DIGITAP_PRODUCTION_KEY || "";
-  }
-  return process.env.DIGITAP_STAGING_KEY || process.env.DIGITAP_PRODUCTION_KEY || "";
+  const url = process.env.TIMBLEGLANCE_URL || DEFAULT_TIMBLEGLANCE_URL;
+  return { apiKey, url };
 }
 
-// Get Basic Auth header for Digitap Experian Credit Analytics API
-function getDigitapBasicAuth() {
-  const clientId = process.env.DIGITAP_CLIENT_ID;
-  const secret = process.env.DIGITAP_SECRET;
-  if (!clientId || !secret) {
-    throw new Error("DIGITAP_CLIENT_ID or DIGITAP_SECRET is missing from server environment");
+function isTruthyFlag(value) {
+  return value === true || String(value || "").trim().toLowerCase() === "true";
+}
+
+function looksLikeHttpUrl(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value.trim());
+}
+
+function looksLikeBase64Pdf(value) {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!trimmed || looksLikeHttpUrl(trimmed)) return false;
+  return (
+    trimmed.startsWith("data:application/pdf;base64,") ||
+    trimmed.startsWith("JVBERi0") ||
+    (trimmed.length > 256 && /^[A-Za-z0-9+/=\r\n]+$/.test(trimmed))
+  );
+}
+
+function firstMatchingValue(candidates, predicate) {
+  for (const candidate of candidates) {
+    if (predicate(candidate)) {
+      return candidate.trim();
+    }
   }
-  return Buffer.from(`${clientId}:${secret}`).toString("base64");
+  return null;
+}
+
+function findScoreDeep(node, depth = 0) {
+  if (!node || typeof node !== "object" || depth > 8) return null;
+
+  const scoreKeys = [
+    "bureauscore",
+    "credit_score",
+    "creditscore",
+    "bureau_score",
+    "cibil_score",
+    "experian_score",
+  ];
+
+  if (!Array.isArray(node)) {
+    for (const [key, val] of Object.entries(node)) {
+      const lower = key.toLowerCase();
+      if (scoreKeys.includes(lower) && val !== undefined && val !== null && val !== "") {
+        const parsed = parseInt(String(val).trim(), 10);
+        if (!Number.isNaN(parsed) && parsed >= 300 && parsed <= 900) {
+          return parsed;
+        }
+      }
+    }
+    for (const val of Object.values(node)) {
+      if (val && typeof val === "object") {
+        const found = findScoreDeep(val, depth + 1);
+        if (found !== null) return found;
+      }
+    }
+  } else {
+    for (const item of node) {
+      const found = findScoreDeep(item, depth + 1);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
+
+function extractCreditScore(data, result) {
+  const responseData = result?.response?.data || result?.data || {};
+  const creditReport = responseData?.credit_report || result?.credit_report || {};
+
+  const candidates = [
+    creditReport?.SCORE?.BureauScore,
+    creditReport?.SCORE?.score,
+    responseData?.credit_score,
+    responseData?.creditScore,
+    responseData?.bureau_score,
+    responseData?.score,
+    responseData?.SCORE?.BureauScore,
+    result?.INProfileResponse?.SCORE?.BureauScore,
+    result?.credit_report?.INProfileResponse?.SCORE?.BureauScore,
+    result?.data?.INProfileResponse?.SCORE?.BureauScore,
+    result?.SCORE?.BureauScore,
+    result?.score_details?.score,
+    result?.credit_score,
+    result?.creditScore,
+    result?.bureau_score,
+    result?.cibil_score,
+    result?.score,
+    result?.cCRResponse?.cIRReportDataLst?.[0]?.cIRReportData?.scoreDetails?.[0]?.value,
+    data?.credit_score,
+    data?.creditScore,
+    data?.score,
+  ];
+
+  for (const val of candidates) {
+    if (val !== undefined && val !== null && val !== "") {
+      const parsed = parseInt(String(val).trim(), 10);
+      if (!Number.isNaN(parsed) && parsed >= 300 && parsed <= 900) {
+        return parsed;
+      }
+    }
+  }
+
+  return findScoreDeep(result);
+}
+
+function stripPdfBlobs(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  if (Array.isArray(obj)) return obj.map(stripPdfBlobs);
+
+  const cleaned = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (looksLikeBase64Pdf(val)) continue;
+    cleaned[key] = typeof val === "object" && val !== null ? stripPdfBlobs(val) : val;
+  }
+  return cleaned;
 }
 
 /**
- * 1. Primary: Call Digitap Experian Credit Analytics API
- * Returns official Experian result_pdf and bureau score
+ * Call TimbleGlance Experian_Bureau_V2 API.
+ * All three fields (`name`, `pan`, `mobile`) are mandatory.
  */
-async function requestExperianAnalytics(payload) {
-  const auth = getDigitapBasicAuth();
+async function requestTimbleGlanceExperian({ name, pan, mobile }) {
+  const { apiKey, url } = getTimbleGlanceConfig();
+
+  const requestBody = {
+    name: String(name).trim(),
+    pan: String(pan).trim().toUpperCase(),
+    mobile: String(mobile).trim(),
+  };
 
   try {
-    const response = await axios.post(
-      "https://svc.digitap.ai/credit_analytics/request",
-      payload,
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 30000,
-      }
-    );
+    const response = await axios.post(url, requestBody, {
+      headers: {
+        "api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      timeout: 30000,
+    });
 
     const data = response.data || {};
-    // Extract official PDF S3 URL
-    const pdfUrl =
-      data?.result?.result_pdf ||
-      data?.data?.result_pdf ||
-      data?.result_pdf ||
-      data?.data?.url ||
-      data?.redirect_url ||
-      data?.url ||
-      null;
+    const result =
+      data.result && typeof data.result === "object" ? data.result : data.data || {};
+    const responseData = result?.response?.data || result?.data || {};
+    const creditReport = responseData?.credit_report || result?.credit_report || {};
 
-    const liveScore =
-      data?.result?.result_json?.INProfileResponse?.SCORE?.BureauScore ||
-      data?.data?.SCORE?.BureauScore ||
-      null;
+    const resultKeys = result && typeof result === "object" ? Object.keys(result) : [];
+    const responseDataKeys =
+      responseData && typeof responseData === "object" ? Object.keys(responseData) : [];
+    const creditReportKeys =
+      creditReport && typeof creditReport === "object" ? Object.keys(creditReport) : [];
+
+    console.log("[TimbleGlance] Response summary:", {
+      httpStatus: response.status,
+      response_code: data.response_code,
+      success: data.success,
+      billable: data.billable,
+      transaction_id: data.transaction_id,
+      resultKeys,
+      responseDataKeys,
+      creditReportKeys,
+    });
+
+    const urlCandidates = [
+      result?.pdf_url,
+      result?.result_pdf,
+      result?.pdf_report,
+      result?.report_pdf_url,
+      result?.report_url,
+      result?.pdf_link,
+      result?.report_link,
+      result?.s3_url,
+      result?.download_url,
+      result?.redirect_url,
+      result?.url,
+      responseData?.pdf_url,
+      responseData?.result_pdf,
+      responseData?.report_url,
+      responseData?.redirect_url,
+      responseData?.url,
+      data?.pdf_url,
+      data?.result_pdf,
+      data?.report_url,
+      data?.redirect_url,
+      data?.url,
+    ];
+
+    const base64Candidates = [
+      result?.pdf_base64,
+      result?.pdf_report,
+      result?.result_pdf,
+      result?.report_pdf,
+      result?.pdf,
+      result?.base64,
+      responseData?.pdf_base64,
+      responseData?.pdf_report,
+      responseData?.pdf,
+      data?.pdf_base64,
+      data?.pdf,
+    ];
+
+    const pdfUrl = firstMatchingValue(urlCandidates, looksLikeHttpUrl);
+    const pdfBase64 = pdfUrl ? null : firstMatchingValue(base64Candidates, looksLikeBase64Pdf);
+    const creditScore = extractCreditScore(data, result);
+    const hasStructuredResult = resultKeys.length > 0;
+    const isSuccess =
+      isTruthyFlag(data.success) || data.response_code === 100 || data.response_code === 200;
+
+    if (!isSuccess && !pdfUrl && !pdfBase64 && !hasStructuredResult) {
+      const err = new Error(
+        data.response_message || data.message || "Could not retrieve Experian report."
+      );
+      err.status = response.status >= 400 ? response.status : 400;
+      err.responseCode = data.response_code;
+      err.transactionId = data.transaction_id;
+      throw err;
+    }
+
+    const reportData = hasStructuredResult ? stripPdfBlobs(result) : null;
 
     return {
       status: response.status,
       success: true,
       pdfUrl,
-      creditScore: liveScore,
-      result_code: data.result_code,
-      message: data.message || "Experian report retrieved successfully",
-      rawResult: {
-        result: data.result ? { result_pdf: pdfUrl } : undefined,
-        message: data.message,
-        result_code: data.result_code,
-      },
+      pdfBase64,
+      creditScore,
+      reportData,
+      transactionId: data.transaction_id || null,
+      responseCode: data.response_code || 200,
+      message: data.response_message || data.message || "Experian report retrieved successfully",
     };
   } catch (error) {
-    console.error(
-      "[Digitap Service] Experian Analytics error:",
-      error.response?.data?.message || error.message
-    );
-    throw error;
-  }
-}
-
-/**
- * 2. Secondary: Call Befisc / SmartAuth Bureau(A) V2
- */
-async function requestBefiscBureau(payload) {
-  const apiKey = getDigitapApiKey();
-  if (!apiKey) {
-    throw new Error("DIGITAP_API_KEY is missing from server environment");
-  }
-
-  const befiscPayload = {
-    name: payload.name,
-    mobile: payload.mobile,
-    consent_text:
-      payload.consent_text ||
-      "We confirm obtaining valid customer consent to access/process their name/mobile data. Consent remains valid, informed, and unwithdrawn.",
-    consent: "Y",
-  };
-
-  try {
-    const response = await axios.post(
-      "https://prod.smartauth.co/JEE4",
-      befiscPayload,
-      {
-        headers: {
-          authkey: apiKey,
-          "Content-Type": "application/json",
-        },
-        timeout: 30000,
-      }
-    );
-
-    const data = response.data || {};
-    const result = data.result || {};
-    const pdfUrl = result.pdf_report || result.url || result.redirect_url || null;
-    const score = result.SCORE?.BureauScore || result.credit_score || 750;
-
-    return {
-      status: response.status,
-      success: data.status === 1,
-      pdfUrl,
-      creditScore: score,
-      message: data.message || "Befisc bureau report retrieved successfully",
-      result: {
-        pdf_report: result.pdf_report,
-        url: result.url,
-        SCORE: result.SCORE,
-        credit_score: score,
-      },
-    };
-  } catch (error) {
-    console.error(
-      "[Digitap Service] Befisc Bureau error:",
-      error.response?.data?.message || error.message
-    );
+    const upstreamData = error.response?.data;
+    if (upstreamData) {
+      console.error("[TimbleGlance] Upstream error summary:", {
+        httpStatus: error.response?.status,
+        response_code: upstreamData.response_code,
+        response_message: upstreamData.response_message || upstreamData.message,
+        billable: upstreamData.billable,
+        transaction_id: upstreamData.transaction_id,
+      });
+    } else {
+      console.error("[TimbleGlance] Request error:", error.message);
+    }
     throw error;
   }
 }
 
 module.exports = {
-  requestExperianAnalytics,
-  requestBefiscBureau,
+  requestTimbleGlanceExperian,
 };
-

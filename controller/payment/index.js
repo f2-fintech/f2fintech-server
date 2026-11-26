@@ -106,7 +106,7 @@ exports.initiatePayuPayment = async (req, res) => {
         payment_id:     txnid,
         payment_status: "pending",
         status:         "pending",
-        bureau:         "Experian",
+        bureau:         "Experian V2",
       });
     } catch (dbErr) {
       console.warn("Could not pre-save CIBIL record:", dbErr.message);

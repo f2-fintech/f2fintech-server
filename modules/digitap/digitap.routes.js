@@ -14,10 +14,10 @@ const { optionalAuth } = require("../../middleware/authGuard");
 router.use(digitapRateLimiter);
 router.use(optionalAuth);
 
-// Narrow CIBIL report endpoint (attempts Experian then Befisc on server)
+// CIBIL report endpoint (TimbleGlance Experian Bureau V2)
 router.post("/cibil-report", controller.getCibilReport);
 
-// Backward-compatible endpoint for existing frontend axiosInstance.post("/proxy-digitap")
+// Retired legacy proxy endpoint
 router.post("/proxy-digitap", controller.proxyDigitap);
 
 module.exports = router;
