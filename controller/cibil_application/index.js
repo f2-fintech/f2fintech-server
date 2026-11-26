@@ -18,7 +18,7 @@ const recordCibilApplication = async (req, res) => {
       creditScore,
       reportUrl,
       status = "completed",
-      bureau = "Experian",
+      bureau = "Experian V2",
       refId,
     } = req.body;
 
@@ -74,7 +74,7 @@ const recordCibilApplication = async (req, res) => {
         credit_score: creditScore ? Number(creditScore) : null,
         report_url: reportUrl || null,
         status: status || "completed",
-        bureau: bureau || "Experian",
+        bureau: bureau || "Experian V2",
         ip_address,
         user_agent,
       });
