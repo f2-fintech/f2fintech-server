@@ -13,6 +13,7 @@ const {
   syncChatbotModels,
 } = require("../../../model/chatbot");
 const { hashToken } = require("../utils/piiCrypto");
+const { resolveActorContext } = require("../utils/rbacPolicy");
 const { processChatTurn } = require("../services/gemini.service");
 const { calculateRepaymentDetails, compareTenureScenarios } = require("../services/repayment.service");
 const { compareLoanProducts } = require("../services/comparison.service");
@@ -31,9 +32,11 @@ const {
   verifyChatOtp,
   resolveAuthorizedCustomerId,
   getCustomerApplicationStatus,
-  updateCustomerApplicationDetails,
+  uploadCustomerApplicationDocument,
   escalateSupportIssue,
 } = require("../services/support.service");
+
+const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getCompanyId(req) {
   return Number(req.headers.companyid || req.headers.CompanyId || req.body?.companyId || 101);
@@ -59,7 +62,8 @@ async function resolveSession(req, sessionIdFromReq = null) {
     }
   }
 
-  const newSessionId = crypto.randomUUID();
+  // Keep client UUID seamless across backend restarts without touching MySQL
+  const newSessionId = sid && UUID_V4_REGEX.test(String(sid).trim()) ? String(sid).trim() : crypto.randomUUID();
   const rawGuestToken = guestToken || crypto.randomBytes(24).toString("hex");
   const session = await ChatbotSession.create({
     id: newSessionId,
@@ -171,11 +175,13 @@ exports.sendMessage = async (req, res) => {
     }
 
     const authCustomerId = await resolveAuthorizedCustomerId(req, session);
+    const actorContext = resolveActorContext(req, session);
 
     const turnResult = await processChatTurn({
       session,
       rawMessage: message,
       authorizedCustomerId: authCustomerId,
+      actorContext,
       companyId,
       preferredLanguage: language,
     });
@@ -563,6 +569,8 @@ exports.getApplicationStatusEndpoint = async (req, res) => {
 
     const status = await getCustomerApplicationStatus({
       customerId: authCustomerId,
+      verifiedContact: session?.verified_contact || null,
+      verifiedEmail: session?.verified_email || null,
       applicationNo: req.query.applicationNo || null,
       companyId,
       language: req.query.language === "hi" ? "hi" : "en",
@@ -578,21 +586,54 @@ exports.getApplicationStatusEndpoint = async (req, res) => {
   }
 };
 
-exports.updateApplicationDetailsEndpoint = async (req, res) => {
+exports.updateApplicationDetailsEndpoint = async (_req, res) => {
+  return res.status(403).json({
+    success: false,
+    error: "Submitted application details cannot be modified. You may only upload missing mandatory documents.",
+  });
+};
+
+exports.uploadMissingApplicationDocumentEndpoint = async (req, res) => {
   try {
-    const session = req.body?.sessionId ? await ChatbotSession.findByPk(req.body.sessionId) : null;
+    const companyId = getCompanyId(req);
+    const { sessionId, applicationId, docType, language } = req.body || {};
+    const file = req.files?.document;
+    const session = await resolveSession(req, sessionId);
     const authCustomerId = await resolveAuthorizedCustomerId(req, session);
+
     if (!authCustomerId) {
-      return res.status(401).json({ success: false, error: "Authentication required." });
+      return res.status(401).json({
+        success: false,
+        error: "Identity verification required before uploading application documents.",
+      });
     }
-    const result = await updateCustomerApplicationDetails({
+
+    const result = await uploadCustomerApplicationDocument({
       customerId: authCustomerId,
-      applicationId: req.body?.applicationId || null,
-      updates: req.body?.updates || {},
+      verifiedContact: session?.verified_contact || null,
+      verifiedEmail: session?.verified_email || null,
+      applicationId: applicationId || null,
+      docType,
+      file,
+      companyId,
+      language: language === "hi" ? "hi" : "en",
     });
-    return res.status(200).json(result);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json({
+      success: true,
+      sessionId: session?.id || sessionId || null,
+      ...result,
+    });
   } catch (err) {
-    return res.status(400).json({ success: false, error: err.message });
+    console.error("[Chatbot.uploadMissingDoc] Error:", err);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to upload missing document. Please try again.",
+    });
   }
 };
 

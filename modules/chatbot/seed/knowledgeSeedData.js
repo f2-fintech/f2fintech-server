@@ -365,6 +365,318 @@ Fraud Safety Rules:
 3. कम CIBIL स्कोर पर आवेदन संभव है? हाँ, यद्यपि 700+ आदर्श है, हम कम स्कोर वाले आवेदकों के लिए भी विकल्प खोजते हैं।`,
     status: "approved",
   },
+  {
+    slug: "realtor-partner-program-guide",
+    category: "application_guide",
+    title: "Realtor Partner Program (/realtor) — Guide, Requirements, Benefits & Application Steps",
+    source_ref: "Realtor.jsx, PartnerApplicationModal.jsx, RealtorAPI.jsx",
+    keywords: "realtor real estate broker property agent partner program rera become join requirements documents steps apply commission payout whatsapp",
+    content_en: `F2 Fintech Realtor Partner Program (Website Route: /realtor):
+Who Can Join: Real estate brokers, property agents, channel partners, and builders who want faster buyer loan approvals and referral commissions on property deals.
+
+Key Benefits & Problems Solved:
+- Access to 40+ Banks & NBFC Lending Partners (higher buyer approval rates vs single-bank rejections).
+- Earn Referral Payouts / Competitive Commissions on every successful loan disbursement.
+- Fast-Track Closings with Dedicated Loan Manager Support & simplified digital documentation.
+- Property Financing Product Suite for Your Buyers:
+  1. Home Loan (rapid buyer processing)
+  2. Loan Against Property / LAP (higher capital limits & lower interest rates)
+  3. Unsecured Balance Payment Loan (bridging balance payment after secured loan)
+  4. Salaried & Personal Loans (quick buyer/client capital needs)
+
+Eligible Property Types Supported:
+- RERA Approved Projects, Autosized Colony Properties, High Rise Buildings, Approved Builder Projects, and Approved Map Properties.
+
+4-Step Onboarding Overview (shown on /realtor):
+01. Scan & Message on WhatsApp (+91 88606 00555) or apply online at /realtor.
+02. Submit KYC Documents (Aadhaar Card, PAN Card, Bank Account details, Photo, and RERA/Company GST if available).
+03. Onboarding & Training (official team orientation & training).
+04. Refer & Earn (refer buyer loan leads and earn commission payouts on disbursal).
+
+Full Website Application Steps (/realtor → "Skip the Queue / Become a Realtor Partner" Multi-Step Modal):
+Verification usually completes within **24 hours** (generates Reference ID like F2REALTOR-XXXXX via POST /api/v1/realtor):
+- Step 1 — Your Details (Mandatory *):
+  • Full Name* (as per Aadhaar / PAN)
+  • 10-Digit Mobile Number* (+91)
+  • Email Address*
+  • City / Location* (e.g. Delhi, Noida)
+  • Years in Real Estate* (Less than 1 year / 1–3 years / 3–5 years / 5+ years)
+  • Gender* (Male / Female / Other)
+  • Agency / Firm Name (Optional)
+- Step 2 — Documents Requirements (Max 5MB per file):
+  • Mandatory Documents (*):
+    1. Aadhaar Card (JPG, PNG or PDF)
+    2. PAN Card (JPG, PNG or PDF)
+    3. Passport-Size Photo (JPG or PNG)
+  • Optional Documents:
+    4. Bank Proof — Cancelled Cheque or Passbook (JPG, PNG or PDF)
+    5. RERA Certificate / Company GST Registration (JPG, PNG or PDF, if RERA/GST registered)
+- Step 3 — Review & Submit:
+  • Review personal details and uploaded documents → tick verification consent checkbox → Submit Application.
+  • Receive confirmation + WhatsApp QR / direct link to message "+91 88606 00555" ("Hi, I want to be a Realtor partner in your company").
+(Note: A quick "Apply Now" callback modal on /realtor also accepts Name, Email, 10-digit Mobile, Optional Company GST, Gender, and Age 18–100.)`,
+    content_hi: `F2 Fintech रियल्टर पार्टनर प्रोग्राम (/realtor) — पूरी गाइड और आवेदन प्रक्रिया:
+यह प्रोग्राम रियल एस्टेट ब्रोकर्स, प्रॉपर्टी एजेंट्स और बिल्डर्स के लिए है ताकि खरीदारों का लोन जल्दी स्वीकृत हो और हर डिस्बर्सल पर रेफरल कमीशन मिले।
+
+मुख्य लाभ और लोन उत्पाद:
+- 40+ बैंक व NBFC पार्टनर्स, तेज़ लोन अप्रूवल, डेडिकेटेड लोन मैनेजर सपोर्ट और आकर्षक रेफरल कमीशन।
+- समर्थित उत्पाद: होम लोन, लोन अगेंस्ट प्रॉपर्टी (LAP), अनसिक्योर्ड बैलेंस पेमेंट लोन, सैलरीड/पर्सनल लोन।
+- मान्य प्रॉपर्टी श्रेणियाँ: RERA Approved Projects, Autosized Colony Properties, High Rise Buildings, Approved Builder Projects, Approved Map Properties।
+
+आवेदन के चरण (/realtor → "Become a Realtor Partner" — 24 घंटे में वेरिफिकेशन):
+- चरण 1 (विवरण): पूरा नाम*, 10 अंकों का मोबाइल नंबर*, ईमेल*, शहर*, रियल एस्टेट अनुभव* (<1 / 1–3 / 3–5 / 5+ वर्ष), जेंडर*, एजेंसी/फर्म का नाम (वैकल्पिक)।
+- चरण 2 (आवश्यक दस्तावेज़ — अधिकतम 5MB):
+  • अनिवार्य: आधार कार्ड (JPG/PNG/PDF), पैन कार्ड (JPG/PNG/PDF), पासपोर्ट-साइज़ फोटो (JPG/PNG)।
+  • वैकल्पिक: बैंक प्रूफ (कैंसल्ड चेक या पासबुक), RERA सर्टिफिकेट / कंपनी GST।
+- चरण 3 (समीक्षा व सबमिट): विवरण जांचकर सहमति दें व सबमिट करें, फिर WhatsApp (+91 88606 00555) पर संदेश भेजें।`,
+    status: "approved",
+  },
+  {
+    slug: "dsa-partner-program-guide",
+    category: "application_guide",
+    title: "DSA Partner Program (/dsa) — Guide, Requirements, Benefits & Application Steps",
+    source_ref: "DSA.jsx, PartnerApplicationModal.jsx, DsaAPI.jsx",
+    keywords: "dsa direct selling agent partner connector loan referral commission payout requirements documents apply whatsapp",
+    content_en: `F2 Fintech DSA Partner Program (Website Route: /dsa):
+Who Can Join: Independent Direct Selling Agents (DSAs), financial advisors, loan consultants, ex-bankers, and connectors looking for multi-lender access and transparent payouts.
+
+Key Benefits & Advantages:
+- Access to 40+ Banks & NBFC Lending Partners from one platform.
+- Higher Commission Structure with transparent payout cycles (7-day / same-day settlements for eligible cases).
+- Faster Loan Approvals & Digital Documentation Workflow.
+- Real-Time Lead Tracking System & Dedicated Relationship Manager (RM).
+
+4-Step Onboarding Overview (shown on /dsa):
+01. Contact Us: Apply at /dsa or message WhatsApp on +91 88106 00135.
+02. Submit KYC Documents: Aadhaar, PAN, Bank Account Details, Photo, and GST / Firm Registration (if available).
+03. Onboarding & Training: Official DSA onboarding and product/policy training.
+04. Start Earning: Refer loan clients and earn commissions on disbursement.
+
+Full Website Application Steps (/dsa → "Become a DSA Partner" Multi-Step Modal):
+Verification usually takes under **24 hours** (generates Reference ID like F2DSA-XXXXX via POST /api/v1/dsa):
+- Step 1 — Your Details (* mandatory):
+  • Full Name* (as per Aadhaar / PAN)
+  • 10-Digit Mobile Number* (+91)
+  • Email Address*
+  • City / Location*
+  • Years in Finance / Loans* (Less than 1 year / 1–3 years / 3–5 years / 5+ years)
+  • Gender* (Male / Female / Other)
+  • Agency / Firm Name (Optional)
+- Step 2 — Documents (Max 5MB per file):
+  • Mandatory (*): Aadhaar Card (JPG/PNG/PDF), PAN Card (JPG/PNG/PDF), Passport-Size Photo (JPG/PNG).
+  • Optional: Bank Proof (Cancelled Cheque / Passbook), GST / Registration Certificate.
+- Step 3 — Review & Submit:
+  • Confirm details & consent → Submit Application → Scan WhatsApp QR / message "+91 88106 00135" ("Hi, I want to be a DSA in your company").
+(Note: A quick "Apply Now" form on /dsa also accepts Name, Email, 10-digit Mobile, Gender, and Age 18–100.)`,
+    content_hi: `F2 Fintech DSA पार्टनर प्रोग्राम (/dsa) — पूरी गाइड और आवेदन प्रक्रिया:
+DSA पार्टनर्स को 40+ बैंकों व NBFCs, उच्च कमीशन स्ट्रक्चर, तेज़ अप्रूवल, रियल-टाइम लीड ट्रैकिंग और डेडिकेटेड RM सपोर्ट मिलता है।
+
+आवेदन के चरण (/dsa → "Become a DSA Partner" — 24 घंटे में वेरिफिकेशन):
+- चरण 1 (विवरण): पूरा नाम*, 10 अंकों का मोबाइल नंबर*, ईमेल*, शहर*, फाइनेंस/लोन अनुभव*, जेंडर*, फर्म का नाम (वैकल्पिक)।
+- चरण 2 (दस्तावेज़ — अधिकतम 5MB): अनिवार्य — आधार कार्ड, पैन कार्ड, पासपोर्ट-साइज़ फोटो; वैकल्पिक — बैंक प्रूफ (कैंसल्ड चेक/पासबुक), GST/रजिस्ट्रेशन।
+- चरण 3 (समीक्षा व सबमिट): विवरण सत्यापित कर सबमिट करें और WhatsApp (+91 88106 00135) पर जुड़ें।`,
+    status: "approved",
+  },
+  {
+    slug: "channel-partner-onboarding-guide",
+    category: "application_guide",
+    title: "Channel Partner Program (/channel-partners) — Eligibility & Signup Guide",
+    source_ref: "ChannelPartners.jsx, ChannelPartnerModal.jsx, ChannelPartnerAPI.jsx",
+    keywords: "channel partner signup join broker student salaried retired banker self employed real estate agent",
+    content_en: `F2 Fintech Channel Partner Inquiry & Onboarding (/channel-partners):
+Who Can Partner: Students, Salaried Persons, Working Individuals, Brokers, DSAs, Retired Bankers, Self-Employed Professionals, and Real Estate Agents.
+
+How to Apply on /channel-partners:
+1. Open /channel-partners and click "Apply Now" to open the Channel Partner Contact/Signup form (submits to POST /api/v1/channel-partner).
+2. Fill in: Organization Name (optional), Category* (Student, Salaried Person, Working Individual, Broker, DSA, Retired Banker, Self Employed, Real Estate Agent), Full Name*, Contact Number*, Email*, State*, City*, and Description / Partnership Note.
+3. Submit to connect directly with F2 Fintech's partner onboarding team.`,
+    content_hi: `F2 Fintech चैनल पार्टनर प्रोग्राम (/channel-partners):
+छात्र, वेतनभोगी, ब्रोकर, DSA, सेवानिवृत्त बैंकर, स्व-रोज़गार और रियल एस्टेट एजेंट जुड़ सकते हैं। /channel-partners पर "Apply Now" क्लिक कर संगठन (वैकल्पिक), श्रेणी, नाम, मोबाइल, ईमेल, राज्य, शहर और विवरण भरकर सबमिट करें।`,
+    status: "approved",
+  },
+  {
+    slug: "careers-departments-roles-and-culture",
+    category: "company_info",
+    title: "Careers at F2 Fintech (/careers) — Hiring Departments, Roles, Work Schedule & Perks",
+    source_ref: "Careers.jsx, CareersSection.jsx",
+    keywords: "careers jobs active roles openings hiring departments sales marketing hr product operations credit it developer data finance work schedule shifts leaves perks culture",
+    content_en: `Careers at F2 Fintech Private Limited (Website Route: /careers):
+F2 Fintech empowers professionals, business owners, and home buyers across investment, insurance, and lending. Founded in 2022, it offers radical ownership, meritocracy over hierarchy, Stage 0→1 fast-track career growth, and evaluations every 3–6 months.
+
+Work Culture, Schedule & Benefits (/careers):
+- Work Schedule: 9-hour shifts (8 hours work + 1 hour break), 6-day work week with a half-day on the last Sunday of the month.
+- Paid Leaves: 24 Paid Leaves per year (2 per month).
+- Perks & Benefits: Health & Wellness routines, Upskilling & Leadership Mentorship, Accelerated Leadership track, Smart Casual Culture, Quarterly Performance Bonuses & Rewards, and Fast-Track 3–6 month reviews.
+
+All 9 Hiring Departments & Standard Role Tracks Listed on /careers:
+1. Sales: Sales Manager, Team Lead - Sales, Sales Executive (outbound calls, DSAs/channel partnerships, customer loan/card/investment closings).
+2. Marketing: Marketing Manager, Graphic Designer, Video Editor, Outreach & Research Executive, SEO & GEO Executive, Performance Marketing Executive, Social Media Strategist.
+3. HR: HR Manager & Business Partner (HRBP), HR Manager, HR Assistant Manager, HR Executive.
+4. Product: Product Director, Product Manager, Associate Product Manager (Executive), Jr. Product Manager (Executive).
+5. Operations: Operations Manager, Assistant Operations Manager, Operations Executive.
+6. Credit: Credit Manager, Assistant Credit Manager, Credit Executive.
+7. IT & Infra: Software Developer, Full Stack Developer, Sr. Tech Head, IT Infra & Networking, IT Infra Support.
+8. Data: Data Analyst, Business Analyst, Data Scientist, Data Entry Operator.
+9. Finance: Finance Manager, Finance Assistant Manager, Finance Executive.
+10. Other / Admin: Executive Assistant, Administrative Assistant, Administrative Executive.
+
+Live Job Openings Feed: Current actively open vacancies on /careers are managed in real time via F2 Fintech's ATS (including roles such as Relationship Executive in Noida, UP when open — ask the assistant for live openings or visit /careers#openings). If your exact role is not listed, you can join the Talent Waitlist on /careers.`,
+    content_hi: `F2 Fintech में करियर (/careers) — विभाग, पद, कार्य समय और लाभ:
+F2 Fintech में 9+ प्रमुख विभागों में करियर अवसर हैं: Sales, Marketing, HR, Product, Operations, Credit, IT & Infra, Data, Finance और Admin।
+- कार्य समय और अवकाश: 9 घंटे की शिफ्ट (8 घंटे कार्य + 1 घंटे ब्रेक), 6 दिन का सप्ताह (महीने के अंतिम रविवार को हाफ-डे), प्रति वर्ष 24 पेड लीव (2 प्रति माह)।
+- प्रमुख लाभ: स्वास्थ्य एवं वेलनेस, अपस्किलिंग व मेंटरशिप, तेज़ लीडरशिप ग्रोथ, हर 3–6 महीने में परफॉर्मेंस रिव्यू और तिमाही बोनस।
+- सक्रिय नौकरी पद / लाइव ओपनिंग्स: /careers पर रियल-टाइम ATS फ़ीड से दिखाई जाती हैं। यदि आपका मनचाहा पद अभी उपलब्ध नहीं है, तो आप Talent Waitlist में अपना बायोडाटा जमा कर सकते हैं।`,
+    status: "approved",
+  },
+  {
+    slug: "careers-application-steps-and-waitlist-guide",
+    category: "application_guide",
+    title: "How to Apply for a Job or Join Talent Waitlist at F2 Fintech (/careers)",
+    source_ref: "CareersModal.jsx, WaitlistModal.jsx, Careers.jsx",
+    keywords: "apply job career steps requirements resume qualification experience fresher work schedule referral waitlist modal",
+    content_en: `Complete 6-Step Job Application Flow at F2 Fintech (/careers → "Apply Now" on an Active Opening):
+- Step 01 — Personal Details & Resume:
+  • Upload Resume* (PDF, DOCX, or RTF; max 5MB).
+  • Title* (Mr., Miss, Mrs., Dr., Other), Full Name*, Email Address*, 10-digit Phone Number*.
+  • Highest Qualification* (High School, Diploma, Bachelor's Degree, Master's Degree, MBA/PGBM, Professional Certification like CFA/CA, Other). If Professional Certification is selected, also provide: Place/Institute*, Subject*, Marks/Grade*, and Certificate file* (PDF/DOCX/JPG/PNG, max 5MB).
+  • City* & Willingness to Relocate to Noida / Noida NCR / Bareilly*.
+- Step 02 — Work Experience:
+  • Indicate whether you have prior work experience or are a Fresher (freshers are welcome!).
+  • If Experienced: Add experience block(s) with Field of Experience*, Years*, Company Name*, Job Role*, and Last Annual Salary*.
+- Step 03 — Work Schedule Confirmation:
+  • Confirm willingness for 9-hour shifts (8 hrs work + 1 hr break), 6 days/week, half day on last Sunday of the month.
+- Step 04 — Tell Us More & Custom Questions:
+  • Optional: "Why do you want to join F2finTech?".
+  • Mandatory (if configured on job): Role-specific custom screening questions.
+- Step 05 — Referral:
+  • Indicate if referred by an F2 Fintech employee. If Yes: Employee Name*, Designation*, Department* (Sales/HR/Engineering/Marketing/Finance/Operations/Other), and Employee Code (preferred).
+- Step 06 — Review & Submit:
+  • Review summary of all steps and submit directly to F2 Fintech's ATS hiring pipeline.
+
+Talent Waitlist Flow (Future Openings — Join Waitlist Modal on /careers):
+When no matching role is open yet, submit: Full Name*, Email*, Phone, Current City, Currently Employed? (Yes/No)*, Target Department*, Specific Role Title, and Resume* (PDF/DOC/DOCX) — our talent team reaches out first when a matching vacancy opens.`,
+    content_hi: `F2 Fintech नौकरी आवेदन की पूरी 6-चरणीय प्रक्रिया (/careers):
+1. व्यक्तिगत विवरण व रेज़्यूमे: रेज़्यूमे* (PDF/DOCX/RTF, अधिकतम 5MB), शीर्षक व पूरा नाम*, ईमेल*, 10 अंकों का फोन*, उच्चतम योग्यता* (यदि CFA/CA जैसा सर्टिफिकेट है तो संस्थान, विषय, अंक और फाइल*), शहर* और नोएडा/NCR रीलोकेशन सहमति*।
+2. कार्य अनुभव: अनुभवी या फ्रेशर चुनें (अनुभवी होने पर क्षेत्र, वर्ष, कंपनी, पद और पिछला वेतन भरें)।
+3. कार्य समय सहमति: 9 घंटे की शिफ्ट (6 दिन, माह के अंतिम रविवार को हाफ-डे) की सहमति।
+4. अतिरिक्त जानकारी: कंपनी जॉइन करने का कारण (वैकल्पिक) और पद-विशेष प्रश्न।
+5. रेफरल: क्या किसी कर्मचारी ने रेफर किया (हाँ तो नाम, पद, विभाग, कोड)।
+6. समीक्षा और सबमिट।
+यदि वर्तमान में उपयुक्त पद खाली न हो, तो /careers पर Talent Waitlist में नाम, ईमेल, विभाग, पद और रेज़्यूमे जमा कर सकते हैं।`,
+    status: "approved",
+  },
+  {
+    slug: "self-serve-website-portals-guide",
+    category: "application_guide",
+    title: "F2 Fintech Website Portals Guide — Eligibility Checker, CIBIL, Credit Cards & Plans",
+    source_ref: "EligibilityCriteria.jsx, CibilScore.jsx, DownloadCibil.jsx, CreditCards.jsx, plans.jsx",
+    keywords: "website portals eligibility checker cibil score download credit cards bankkaro loan tracker plans subscription portfolio",
+    content_en: `F2 Fintech Self-Serve Website Tools & Portals:
+1. Loan Eligibility Checker (/eligibility-checker): 3-step guide (Basic Details: Name, Contact, PAN, DOB → Loan Information: Loan Category & Financials → Available Bank Offers).
+2. CIBIL & Credit Score (/check-cibil-score & /download-cibil): Check credit score and download bureau CIBIL report.
+3. Credit Cards Marketplace (/cards & /credit-cards): Powered by BankKaro — compare credit cards by rewards/benefits and apply online.
+4. Loan Application & Status Tracking (/application-form & /loan-tracker, or right inside this AI Assistant): Submit a loan application and track real-time application & credit-team ticket status with OTP verification.
+5. Financial Planning Subscriptions (/plans): Monthly Plan (₹199 — financial assessment, investment recommendations, dedicated representative), 6-Months Plan (₹599 — comprehensive planning, semi-annual portfolio review, tax-saving & retirement guidance), and Annual Plan (₹999 — full-spectrum consulting, quarterly adjustments, estate planning, priority access).`,
+    content_hi: `F2 Fintech वेबसाइट के प्रमुख पोर्टल:
+- लोन पात्रता जांच (/eligibility-checker): 3 चरण (बुनियादी विवरण → लोन जानकारी → उपलब्ध बैंक ऑफर)।
+- CIBIL स्कोर जांच व डाउनलोड (/check-cibil-score, /download-cibil)।
+- क्रेडिट कार्ड तुलना व आवेदन (/cards)।
+- लोन आवेदन व ट्रैकिंग (/application-form, /loan-tracker)।
+- वित्तीय योजना सब्सक्रिप्शन (/plans): ₹199 मासिक, ₹599 छमाही, ₹999 वार्षिक।`,
+    status: "approved",
+  },
+  {
+    slug: "credit-cards-advisor-guide",
+    category: "product_guide",
+    title: "F2 Fintech AI-Powered Credit Cards Advisor (/cards) — 130+ Verified Cards",
+    source_ref: "CreditCards.jsx, controller/credit_cards/index.js",
+    keywords: "credit cards cardgenius bankkaro cashback fuel shopping travel dining grocery upi lounge rupay visa mastercard amex lifetime free eligibility calculate savings",
+    content_en: `F2 Fintech Credit Cards Platform (/cards — AI-Powered Card Advisor):
+- Catalog Scale: Compare 130+ verified credit cards powered by BankKaro / CardGenius live bank integrations with 100% Free Comparison and Instant Bank Offers.
+- Participating Banks & Issuers: SBI, HDFC Bank, Axis Bank, ICICI Bank, Kotak Mahindra Bank, IndusInd Bank, IDFC FIRST Bank, YES Bank, AU Small Finance Bank, RBL Bank, HSBC, BOBCARD, plus fintech co-branded cards (Kiwi, Scapia, Tata Neu, Flipkart Axis, Swiggy HDFC, etc.).
+- Spend Categories Supported: Shopping, Online Food Ordering, Dining, Grocery Shopping, Travel, UPI, Utility Bills, Fuel, and Airport Lounge access.
+- Card Networks & Fee Filters: Filter across VISA, Mastercard, RuPay, and AmericanExpress; filter specifically for Lifetime-Free / ₹0 joining-fee cards or fee ranges (Free, ₹1–₹1,000, ₹1,001–₹2,000, ₹2,001–₹5,000, ₹5,001+).
+- Smart Tools on /cards:
+  1. Search by card name or bank (e.g., SBI Cashback, Axis Flipkart, HDFC Regalia Gold, Kiwi Klick).
+  2. 3-Field Eligibility Bar to shortlist matching cards quickly.
+  3. CardGenius Spend Calculator estimating yearly cashback/reward savings from your monthly spends.
+  4. Side-by-Side Card Comparison modal and direct tracked online application flow.`,
+    content_hi: `F2 Fintech क्रेडिट कार्ड प्लेटफॉर्म (/cards — AI-पॉवर्ड कार्ड एडवाइज़र):
+- BankKaro / CardGenius के माध्यम से 130+ सत्यापित क्रेडिट कार्ड्स की 100% मुफ़्त तुलना और इंस्टेंट बैंक ऑफर्स।
+- प्रमुख बैंक: SBI, HDFC Bank, Axis Bank, ICICI Bank, Kotak, IndusInd, IDFC, YES Bank, AU, RBL, HSBC, BOBCARD और Kiwi/Scapia/Tata जैसे कार्ड्स।
+- श्रेणियाँ: शॉपिंग, ऑनलाइन फूड, डाइनिंग, ग्रॉसरी, ट्रैवल, UPI, यूटिलिटी बिल, फ्यूल और एयरपोर्ट लाउंज।
+- नेटवर्क व फिल्टर: VISA, Mastercard, RuPay, AmericanExpress; Lifetime Free (₹0 जॉइनिंग फीस) फिल्टर, स्पेंड कैलकुलेटर, और पात्रता जांच /cards पर उपलब्ध है।`,
+    status: "approved",
+  },
+  {
+    slug: "cibil-report-and-score-guide",
+    category: "product_guide",
+    title: "CIBIL & Credit Score Check and Official Report Download (/download-cibil & /check-cibil-score)",
+    source_ref: "DownloadCibil.jsx, CibilScore.jsx",
+    keywords: "cibil credit score credit report download experian soft inquiry pan pdf free payment history utilization credit age mix inquiries",
+    content_en: `F2 Fintech Credit Score & Official Bureau Report Services (/download-cibil & /check-cibil-score):
+1. Download Official Credit Report (/download-cibil):
+   - Retrieves your official Experian Credit Report PDF (offered completely free for a limited time on the portal).
+   - 100% Soft Inquiry — checking or downloading has ZERO impact on your CIBIL/credit score.
+   - Required Details: First & Last Name (as per PAN/Aadhaar), 10-digit Mobile Number, 10-character PAN (e.g., ABCDE1234F), Email (optional), and Bureau Consent.
+   - 5 Key Score Factors Covered: Payment History (35%), Credit Utilization below 30% (30%), Credit Age (15%), Credit Mix (10%), and Recent Inquiries (10%).
+2. 4-Bureau Credit Health Check (/check-cibil-score):
+   - Uses Name, Mobile, and PAN to evaluate your multi-bureau score profile and generate a downloadable Credit Health Report PDF.`,
+    content_hi: `F2 Fintech CIBIL स्कोर और आधिकारिक क्रेडिट रिपोर्ट सेवाएं (/download-cibil व /check-cibil-score):
+- /download-cibil पर आधिकारिक Experian क्रेडिट रिपोर्ट PDF प्राप्त करें (सीमित समय के लिए मुफ़्त)।
+- यह 100% सॉफ्ट इंक्वायरी है — इससे आपके क्रेडिट स्कोर पर कोई नकारात्मक असर नहीं पड़ता।
+- आवश्यक विवरण: पूरा नाम (PAN/आधार के अनुसार), 10 अंकों का मोबाइल नंबर, PAN नंबर और सहमति।
+- स्कोर के 5 मुख्य आधार: भुगतान इतिहास (35%), क्रेडिट उपयोग (30%), क्रेडिट आयु (15%), क्रेडिट मिक्स (10%) और हाल की इंक्वायरी (10%)।`,
+    status: "approved",
+  },
+  {
+    slug: "regulatory-compliance-fair-practices-grievance",
+    category: "company_policy",
+    title: "Regulatory Compliance, Fair Practices Code, Grievance Policy, Privacy & Terms",
+    source_ref: "Compliance.jsx, FairPractices.jsx, Grievance.jsx, Privacy.jsx, Terms.jsx",
+    keywords: "regulatory compliance cin lsp fair practices code fpc grievance redressal gro abhinav awal support wecare privacy policy terms conditions dpiit npci",
+    content_en: `F2 Fintech Regulatory Disclosures & Governance Policies:
+1. Corporate & Regulatory Compliance (/compliance):
+   - Registered Entity: F2 Fintech Private Limited | CIN: U67100UP2022PTC168197 | Incorporated: July 25, 2022.
+   - Registered & Corporate Office: Office 201, Second floor, C-127, AGS Park, C Block, Sector 63, Noida, Uttar Pradesh 201301.
+   - Digital Lending Service Provider (LSP) Status: Acts strictly as an LSP and lead generator partner for scheduled commercial banks and RBI-registered NBFCs (including HDFC Bank, ICICI Bank, Bajaj Finserv, Cholamandalam, Indifi, Flexiloan); does NOT engage in direct balance-sheet lending.
+   - Recognitions & Affiliations: Startup India Recognition Certificate (DPIIT, Govt. of India), NPCI Propel Program, IIM Lucknow Noida Incubation, IIT-Delhi Appreciation, MSME India Business Award, Indian Icon Award, Delhi Medical Association, TRAI compliance.
+2. Fair Practices Code (/fair-practices-code):
+   - Zero arbitrary unadvertised platform fees; real-time transparent disclosure of partner interest rates, APR, processing fees, pre-closure charges, and tenures; equal opportunity & non-discrimination; strict zero-tolerance policy against coercive collection conduct (8:00 AM–7:00 PM communication norms); encrypted data privacy shared only with authorized RBI-registered lending partners.
+3. Grievance Redressal Policy (/grievance-policy):
+   - Level 1 Support: support@f2fintech.com | +91 81300 60135 | Turnaround: Within 7 Working Days.
+   - Level 2 Escalation (Grievance Redressal Officer - GRO): Mr. Abhinav Awal (Co-founder & MD) | wecare@f2fintech.com | +91 88606 00555 | Turnaround: Within 15 Working Days.
+4. Privacy Policy (/privacy-policy) & Terms and Conditions (/terms-and-condition):
+   - Governs website use at https://f2fintech.com, user consent, encryption, and customer data protection.`,
+    content_hi: `F2 Fintech नियामक (Regulatory), फेयर प्रैक्टिसेस कोड व शिकायत निवारण नीति:
+- कॉर्पोरेट पहचान (/compliance): F2 Fintech Private Limited | CIN: U67100UP2022PTC168197 | स्थापना: 25 जुलाई 2022 | नोएडा कार्यालय: Office 201, C-127, AGS Park, Sector 63, Noida, UP 201301। कंपनी केवल डिजिटल LSP के रूप में बैंक/NBFC पार्टनर्स से जोड़ती है, स्वयं डायरेक्ट लेंडिंग नहीं करती।
+- फेयर प्रैक्टिसेस कोड (/fair-practices-code): बिना छिपे शुल्क के पारदर्शी ब्याज दर, APR व फीस जानकारी, बिना भेदभाव सेवा और सख्त एथिकल आचार संहिता।
+- शिकायत निवारण (/grievance-policy): लेवल 1 सपोर्ट (support@f2fintech.com, +91 81300 60135, 7 कार्य दिवस); लेवल 2 GRO: श्री अभिनव अवल (wecare@f2fintech.com, +91 88606 00555, 15 कार्य दिवस)।
+- प्राइवेसी पॉलिसी (/privacy-policy) और नियम व शर्तें (/terms-and-condition) वेबसाइट उपयोग व डेटा सुरक्षा के लिए लागू हैं।`,
+    status: "approved",
+  },
+  {
+    slug: "f2fintech-tech-products-and-resources",
+    category: "company_info",
+    title: "F2 Fintech SaaS Products Suite & Learning Resources (/our-products, /blogs, /loan-presentations)",
+    source_ref: "OurProducts.jsx, Blogs, LoanPresentations",
+    keywords: "our products saas ems karya io aarogya ats quora ai payroll blogs loan presentations resources",
+    content_en: `F2 Fintech Technology Products (/our-products) & Learning Resources:
+- SaaS & Enterprise Products (/our-products):
+  1. EMS (Employee Management System): Employee records, payroll, attendance, leave management, HR automation.
+  2. Karya.io: All-in-one office task & team productivity management platform.
+  3. Aarogya: Healthcare management system for doctors/practitioners (appointments, teleconsultation, patient records, prescriptions).
+  4. ATS (Applicant Tracking System): Recruitment & candidate pipeline management for HR teams.
+  5. Quora AI: Intelligent AI workflow automation agents.
+  6. Payroll System: Salary disbursements, tax calculations, and statutory compliance.
+- Learning & Partner Resources:
+  • Financial Blogs (/blogs): Educational articles on loans, credit score, business finance, and financial literacy.
+  • Loan Presentations (/loan-presentations): Detailed product decks and lender presentation resources.`,
+    content_hi: `F2 Fintech टेक प्रोडक्ट्स (/our-products) व संसाधन (/blogs, /loan-presentations):
+- हमारे SaaS प्रोडक्ट्स (/our-products): EMS (कर्मचारी प्रबंधन), Karya.io (ऑफिस टास्क प्रबंधन), Aarogya (डॉक्टर/हेल्थकेयर प्रबंधन), ATS (भर्ती प्रणाली), Quora AI (AI एजेंट्स) और Payroll सिस्टम।
+- संसाधन: वित्तीय ब्लॉग (/blogs) और लोन प्रेजेंटेशन (/loan-presentations)।`,
+    status: "approved",
+  },
 ];
 
 module.exports = { KNOWLEDGE_SEEDS };

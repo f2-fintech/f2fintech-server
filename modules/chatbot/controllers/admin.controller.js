@@ -6,18 +6,20 @@
  * Copyright © 2024-2026, F2FINTECH. ALL RIGHTS RESERVED.
  */
 
-const { fn, col, Op } = require("sequelize");
 const {
   ChatbotKnowledgeBase,
   LoanProductCatalog,
   LoanFormConfig,
-  ChatbotAnalyticsEvent,
-  ChatbotSession,
   ChatbotAuditLog,
+  ChatbotTurnTrace,
+  getEphemeralAnalyticsSummary,
   syncChatbotModels,
 } = require("../../../model/chatbot");
 const { upsertKnowledgeVector, deleteKnowledgeVector } = require("../../../utility/vector-context");
-const { safeParseJson } = require("../../../model/chatbot/jsonColumn");
+const { lookupApplicationForStaff } = require("../services/support.service");
+const { hasPermission } = require("../utils/rbacPolicy");
+const { listMcpToolDefinitions } = require("../mcp/f2fintechMcpServer");
+const { invalidateChatbotCache, getCacheStats } = require("../services/cache.service");
 
 function getCompanyId(req) {
   return Number(req.headers.companyid || req.headers.CompanyId || req.user?.company_id || 101);
@@ -124,6 +126,7 @@ exports.updateKnowledge = async (req, res) => {
     });
 
     await logAdminAction(req, "kb_updated", "chatbot_knowledge_base", entry.id, { version: entry.version });
+    invalidateChatbotCache(entry.company_id);
     return res.status(200).json({ success: true, data: entry });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -162,6 +165,7 @@ exports.approveKnowledge = async (req, res) => {
     }
 
     await logAdminAction(req, "kb_approved", "chatbot_knowledge_base", entry.id, { vectorSynced: synced });
+    invalidateChatbotCache(entry.company_id);
     return res.status(200).json({ success: true, data: entry, vectorSynced: synced });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -180,6 +184,7 @@ exports.archiveKnowledge = async (req, res) => {
     await entry.update({ status: "archived", updated_at: new Date() });
     await deleteKnowledgeVector({ id: entry.id, slug: entry.slug });
     await logAdminAction(req, "kb_archived", "chatbot_knowledge_base", entry.id);
+    invalidateChatbotCache(entry.company_id);
 
     return res.status(200).json({ success: true, message: "Entry archived and removed from vector store." });
   } catch (err) {
@@ -265,6 +270,7 @@ exports.approveCatalogProduct = async (req, res) => {
       updated_at: new Date(),
     });
     await logAdminAction(req, "catalog_approved", "loan_product_catalog", prod.id);
+    invalidateChatbotCache(prod.company_id);
     return res.status(200).json({ success: true, data: prod });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -298,6 +304,7 @@ exports.updateFormConfig = async (req, res) => {
       updated_at: new Date(),
     });
     await logAdminAction(req, "form_config_updated", "loan_form_configurations", cfg.loan_type);
+    invalidateChatbotCache(cfg.company_id);
     return res.status(200).json({ success: true, data: cfg });
   } catch (err) {
     return res.status(500).json({ success: false, error: err.message });
@@ -312,148 +319,101 @@ exports.getAnalyticsSummary = async (req, res) => {
     const companyId = getCompanyId(req);
     const days = Math.min(Number(req.query.days) || 30, 365);
     const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-
-    const [
-      totalConversations,
-      uniqueUsersRow,
-      eventCountsRaw,
-      categoryRaw,
-      topFaqRaw,
-      unresolvedRaw,
-      feedbackRaw,
-      recentComparisons,
-    ] = await Promise.all([
-      ChatbotSession.count({
-        where: { company_id: companyId, created_at: { [Op.gte]: sinceDate } },
-      }),
-      ChatbotSession.count({
-        distinct: true,
-        col: "customer_id",
-        where: { company_id: companyId, customer_id: { [Op.ne]: null }, created_at: { [Op.gte]: sinceDate } },
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["event_type", [fn("COUNT", col("id")), "total"]],
-        where: { company_id: companyId, created_at: { [Op.gte]: sinceDate } },
-        group: ["event_type"],
-        raw: true,
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["loan_category", [fn("COUNT", col("id")), "total"]],
-        where: {
-          company_id: companyId,
-          loan_category: { [Op.ne]: null },
-          created_at: { [Op.gte]: sinceDate },
-        },
-        group: ["loan_category"],
-        order: [[fn("COUNT", col("id")), "DESC"]],
-        raw: true,
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["topic_tag", [fn("COUNT", col("id")), "total"]],
-        where: {
-          company_id: companyId,
-          event_type: "faq_asked",
-          topic_tag: { [Op.ne]: null },
-          created_at: { [Op.gte]: sinceDate },
-        },
-        group: ["topic_tag"],
-        order: [[fn("COUNT", col("id")), "DESC"]],
-        limit: 10,
-        raw: true,
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["topic_tag", [fn("COUNT", col("id")), "total"]],
-        where: {
-          company_id: companyId,
-          event_type: "unresolved_query",
-          topic_tag: { [Op.ne]: null },
-          created_at: { [Op.gte]: sinceDate },
-        },
-        group: ["topic_tag"],
-        order: [[fn("COUNT", col("id")), "DESC"]],
-        limit: 10,
-        raw: true,
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["rating", [fn("COUNT", col("id")), "total"]],
-        where: {
-          company_id: companyId,
-          event_type: "feedback_submitted",
-          created_at: { [Op.gte]: sinceDate },
-        },
-        group: ["rating"],
-        raw: true,
-      }),
-      ChatbotAnalyticsEvent.findAll({
-        attributes: ["provider_names_json", "loan_category"],
-        where: {
-          company_id: companyId,
-          event_type: "comparison_run",
-          created_at: { [Op.gte]: sinceDate },
-        },
-        limit: 200,
-        raw: true,
-      }),
-    ]);
-
-    const eventMap = {};
-    for (const row of eventCountsRaw) {
-      eventMap[row.event_type] = Number(row.total);
-    }
-
-    const providerCompareCounts = {};
-    for (const comp of recentComparisons) {
-      const parsedList = safeParseJson(comp.provider_names_json, []);
-      const list = Array.isArray(parsedList) ? parsedList : [];
-      for (const p of list) {
-        providerCompareCounts[p] = (providerCompareCounts[p] || 0) + 1;
-      }
-    }
-
-    const positiveCount = Number(feedbackRaw.find((f) => Number(f.rating) === 1)?.total || 0);
-    const negativeCount = Number(feedbackRaw.find((f) => Number(f.rating) === -1)?.total || 0);
-    const totalFeedback = positiveCount + negativeCount;
+    const summary = getEphemeralAnalyticsSummary(companyId, sinceDate);
 
     return res.status(200).json({
       success: true,
       periodDays: days,
-      kpis: {
-        totalConversations,
-        uniqueAuthenticatedUsers: uniqueUsersRow,
-        comparisonsRun: eventMap.comparison_run || 0,
-        recommendationsGenerated: eventMap.recommendation_run || 0,
-        emiCalculations: eventMap.emi_calculated || 0,
-        applicationsInitiated: eventMap.app_started || 0,
-        applicationsCompleted: eventMap.app_completed || 0,
-        applicationsAbandoned: Math.max(0, (eventMap.app_started || 0) - (eventMap.app_completed || 0)),
-        documentUploadFailures: eventMap.doc_upload_failed || 0,
-        unresolvedQueriesCount: eventMap.unresolved_query || 0,
-        supportEscalations: eventMap.support_escalated || 0,
-        csatPositivePercent: totalFeedback > 0 ? Math.round((positiveCount / totalFeedback) * 100) : null,
-        totalFeedback,
+      storageMode: summary.storageMode,
+      kpis: summary.kpis,
+      observability: {
+        ...summary.observability,
+        faqCacheStats: getCacheStats(),
       },
-      charts: {
-        loanCategoriesExplored: categoryRaw.map((r) => ({
-          category: r.loan_category,
-          count: Number(r.total),
-        })),
-        providerComparisons: Object.entries(providerCompareCounts)
-          .map(([provider, count]) => ({ provider, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 10),
-        frequentlyAskedTopics: topFaqRaw.map((r) => ({
-          topic: r.topic_tag,
-          count: Number(r.total),
-        })),
-        unresolvedTopics: unresolvedRaw.map((r) => ({
-          topic: r.topic_tag,
-          count: Number(r.total),
-        })),
-      },
+      charts: summary.charts,
     });
   } catch (err) {
     console.error("[ChatbotAdmin.analytics] Error:", err);
     return res.status(500).json({ success: false, error: "Failed to load chatbot analytics." });
+  }
+};
+
+/* ─── Role-Scoped Staff Lookup & Compliance Audit Logs (RBAC) ────────────────── */
+
+exports.getStaffApplicationView = async (req, res) => {
+  try {
+    const role = req.user?.role;
+    const { applicationNo, customerId } = req.query;
+    const result = await lookupApplicationForStaff({
+      role,
+      viewerCustomerId: req.user?.id || null,
+      applicationNo,
+      customerId,
+    });
+
+    if (!result.allowed) {
+      return res.status(403).json({ success: false, error: result.error });
+    }
+
+    if (result.found && result.auditRequired) {
+      await logAdminAction(
+        req,
+        result.accessLevel === "full_kyc" ? "compliance_kyc_viewed" : "support_masked_record_viewed",
+        "customer_application",
+        result.application?.id || applicationNo || customerId,
+        { accessLevel: result.accessLevel, role }
+      );
+    }
+
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getAuditLogs = async (req, res) => {
+  try {
+    if (!hasPermission(req.user?.role, "audit:read")) {
+      return res.status(403).json({ success: false, error: "Compliance or admin role required for audit logs." });
+    }
+    await syncChatbotModels();
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const logs = await ChatbotAuditLog.findAll({
+      order: [["created_at", "DESC"], ["id", "DESC"]],
+      limit,
+    });
+    return res.status(200).json({ success: true, data: logs });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Failed to load audit logs." });
+  }
+};
+
+exports.getMcpTools = async (req, res) => {
+  try {
+    const tools = await listMcpToolDefinitions();
+    return res.status(200).json({
+      success: true,
+      count: tools.length,
+      data: tools.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Failed to list MCP tools." });
+  }
+};
+
+exports.getTurnTraces = async (req, res) => {
+  try {
+    await syncChatbotModels();
+    const companyId = getCompanyId(req);
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const traces = await ChatbotTurnTrace.findAll({
+      where: { company_id: companyId },
+      order: [["created_at", "DESC"], ["id", "DESC"]],
+      limit,
+    });
+    return res.status(200).json({ success: true, data: traces });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: "Failed to load turn traces." });
   }
 };
 

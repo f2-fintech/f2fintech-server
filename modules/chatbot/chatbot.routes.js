@@ -8,7 +8,7 @@ const express = require("express");
 const router = express.Router();
 const chatbotController = require("./controllers/chatbot.controller");
 const adminController = require("./controllers/admin.controller");
-const { optionalAuth, requireAdmin } = require("../../middleware/authGuard");
+const { optionalAuth, requireAdmin, requireComplianceOrAdmin, requireStaffRole } = require("../../middleware/authGuard");
 const {
   chatbotRateLimiter,
   chatbotUploadRateLimiter,
@@ -42,6 +42,12 @@ router.post("/auth/send-otp", chatbotOtpRateLimiter, chatbotController.sendOtpEn
 router.post("/auth/verify-otp", chatbotOtpRateLimiter, chatbotController.verifyOtpEndpoint);
 router.get("/application/status", chatbotRateLimiter, optionalAuth, chatbotController.getApplicationStatusEndpoint);
 router.patch("/application/details", chatbotRateLimiter, optionalAuth, chatbotController.updateApplicationDetailsEndpoint);
+router.post(
+  "/application/upload-missing-document",
+  chatbotUploadRateLimiter,
+  optionalAuth,
+  chatbotController.uploadMissingApplicationDocumentEndpoint
+);
 router.post("/support/escalate", chatbotRateLimiter, optionalAuth, chatbotController.escalateSupportEndpoint);
 
 // Admin Knowledge Management & Analytics (Strict RBAC)
@@ -59,7 +65,11 @@ router.post("/admin/catalog/:id/approve", requireAdmin, adminController.approveC
 router.get("/admin/form-configs", requireAdmin, adminController.listFormConfigs);
 router.put("/admin/form-configs/:loanType", requireAdmin, adminController.updateFormConfig);
 
-router.get("/admin/analytics", requireAdmin, adminController.getAnalyticsSummary);
+router.get("/admin/analytics", requireComplianceOrAdmin, adminController.getAnalyticsSummary);
+router.get("/admin/traces", requireComplianceOrAdmin, adminController.getTurnTraces);
+router.get("/admin/audit-logs", requireComplianceOrAdmin, adminController.getAuditLogs);
+router.get("/admin/mcp-tools", requireStaffRole, adminController.getMcpTools);
+router.get("/staff/application-lookup", requireStaffRole, adminController.getStaffApplicationView);
 
 module.exports = router;
 

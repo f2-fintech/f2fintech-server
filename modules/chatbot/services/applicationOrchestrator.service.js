@@ -21,6 +21,7 @@ const {
   ChatbotSession,
   ChatbotAnalyticsEvent,
   ChatbotAuditLog,
+  syncChatbotModels,
 } = require("../../../model/chatbot");
 const Utility = require("../../../utility");
 const sendEmail = require("../../../utility/email");
@@ -80,6 +81,12 @@ function parseTenureToMonths(tenureInput) {
     return num;
   }
   return num <= 30 ? num * 12 : num;
+}
+
+function parseTenureToYears(tenureInput) {
+  const months = parseTenureToMonths(tenureInput);
+  if (!months) return null;
+  return Math.max(1, Math.round(months / 12));
 }
 
 /**
@@ -555,19 +562,8 @@ async function uploadDraftDocument({ sessionId, customerId = null, file, docType
 
   const docUrl = await Utility.uploadToS3(s3Key, file);
 
-  // If authenticated customer already exists, also save in customer_document immediately
-  let dbDocId = null;
-  const activeCustomerId = customerId || draft.customer_id;
-  if (activeCustomerId) {
-    const createdDoc = await CustomerDocumentModel.create({
-      customer_id: activeCustomerId,
-      document_url: docUrl,
-      type: cleanDocType,
-      company_id: String(companyId),
-    });
-    dbDocId = createdDoc.id;
-  }
-
+  // Defer inserting into customer_document until submitApplicationDraft creates each specific customer_application row,
+  // so draft uploads stay strictly isolated from any earlier submitted applications of this customer.
   const currentDocs = Array.isArray(draft.uploaded_docs_json) ? [...draft.uploaded_docs_json] : [];
   // Replace single-file KYC docs rather than accumulating stale rejected entries
   const filteredDocs = ["aadhaar front", "aadhaar back", "pancard", "photo"].includes(cleanDocType)
@@ -575,13 +571,13 @@ async function uploadDraftDocument({ sessionId, customerId = null, file, docType
     : currentDocs;
 
   filteredDocs.push({
-    id: dbDocId || crypto.randomUUID(),
+    id: crypto.randomUUID(),
     type: cleanDocType,
     fileName: validation.safeName,
     size: validation.size,
     document_url: docUrl,
     status: "uploaded",
-    persistedToCustomerDoc: Boolean(dbDocId),
+    persistedToCustomerDoc: false,
     uploadedAt: new Date().toISOString(),
   });
 
@@ -751,6 +747,7 @@ async function submitApplicationDraft({
     : "";
   const fullName = `${capPrefix} ${data.name}`.trim();
 
+  await syncChatbotModels();
   const transaction = await sequelize.transaction();
   try {
     let finalCustomerId = customerId || draft.customer_id;
@@ -827,28 +824,15 @@ async function submitApplicationDraft({
       await CustomerInfoModel.create(infoPayload, { transaction });
     }
 
-    // Persist any draft documents not yet written to customer_document
+    // Create 1 application + loan_tracking row per selected provider, then persist draft documents scoped strictly per created application_id
+    const enumValues = CustomerDocumentModel.rawAttributes?.type?.values || [];
+    const draftUploadedDocs = progress.uploadedDocs.filter(
+      (doc) => doc.status === "uploaded" && doc.document_url
+    );
     const updatedUploadedDocs = [];
-    for (const doc of progress.uploadedDocs) {
-      if (doc.status === "uploaded" && !doc.persistedToCustomerDoc && doc.document_url) {
-        const createdDoc = await CustomerDocumentModel.create(
-          {
-            customer_id: finalCustomerId,
-            document_url: doc.document_url,
-            type: doc.type,
-            company_id: String(companyId),
-          },
-          { transaction }
-        );
-        updatedUploadedDocs.push({ ...doc, id: createdDoc.id, persistedToCustomerDoc: true });
-      } else {
-        updatedUploadedDocs.push(doc);
-      }
-    }
-
-    // Create 1 application + loan_tracking row per selected provider
     const submittedApps = [];
     const tenureNumeric = Number(data.tenure_months) || parseTenureToMonths(data.tenure) || 12;
+    const tenureYears = parseTenureToYears(data.tenure_display || data.tenure || tenureNumeric) || 1;
 
     for (const providerName of providersList) {
       const appNo = crypto.randomInt(10000000, 99999999);
@@ -863,7 +847,7 @@ async function submitApplicationDraft({
           company_id: companyId,
           application_no: appNo,
           amount: customProviderAmt,
-          tenure: tenureNumeric,
+          tenure: tenureYears,
           provider: providerName,
           loan_type: progress.loanType,
           loan_category: progress.loanCategory,
@@ -892,12 +876,32 @@ async function submitApplicationDraft({
         { transaction }
       );
 
+      for (const doc of draftUploadedDocs) {
+        const rawType = String(doc.type || "certificate").toLowerCase().trim();
+        const validDocType = enumValues.includes(rawType) ? rawType : "certificate";
+        const createdDoc = await CustomerDocumentModel.create(
+          {
+            customer_id: finalCustomerId,
+            customer_application_id: createdApp.id,
+            document_url: doc.document_url,
+            type: validDocType,
+            company_id: String(companyId),
+          },
+          { transaction }
+        );
+        if (submittedApps.length === 0) {
+          updatedUploadedDocs.push({ ...doc, id: createdDoc.id, persistedToCustomerDoc: true });
+        }
+      }
+
       submittedApps.push({
         applicationId: createdApp.id,
         applicationNo: appNo,
         provider: providerName,
         loanType: progress.loanType,
         amount: customProviderAmt,
+        tenure: `${tenureYears} ${tenureYears === 1 ? "Year" : "Years"}`,
+        tenureYears,
         tenureMonths: tenureNumeric,
         trackingStatus: "submitted",
       });

@@ -11,15 +11,19 @@ const {
   ChatbotKnowledgeBase,
   LoanProductCatalog,
   LoanFormConfig,
+  migrateLegacyRowsToSingleStore,
+  dropLegacyChatbotTables,
   syncChatbotModels,
 } = require("../../../model/chatbot");
 const LoanProviderModel = require("../../../model/loan_provider");
 const { KNOWLEDGE_SEEDS } = require("./knowledgeSeedData");
 const { FORM_CONFIG_SEEDS } = require("./formConfigSeedData");
 const { upsertKnowledgeVector } = require("../../../utility/vector-context");
+const { invalidateChatbotCache } = require("../services/cache.service");
 
 async function seedChatbotDatabase({ syncVectors = false, companyId = 101 } = {}) {
   await syncChatbotModels();
+  const migratedFromLegacy = await migrateLegacyRowsToSingleStore();
 
   // Map existing MySQL loan_provider records by lowercase name
   let providerMap = new Map();
@@ -97,7 +101,10 @@ async function seedChatbotDatabase({ syncVectors = false, companyId = 101 } = {}
     formCount++;
   }
 
+  invalidateChatbotCache(companyId);
+
   return {
+    migratedFromLegacy,
     catalogCount,
     kbCount,
     formCount,
@@ -106,8 +113,13 @@ async function seedChatbotDatabase({ syncVectors = false, companyId = 101 } = {}
 
 if (require.main === module) {
   require("dotenv").config({ path: path.resolve(__dirname, "../../../.env") });
+  const dropLegacy = process.argv.includes("--drop-legacy");
   seedChatbotDatabase({ syncVectors: true })
-    .then((res) => {
+    .then(async (res) => {
+      if (dropLegacy) {
+        const dropped = await dropLegacyChatbotTables();
+        res.droppedLegacyTables = dropped;
+      }
       console.log("[SeedChatbotData] Completed:", res);
       process.exit(0);
     })
