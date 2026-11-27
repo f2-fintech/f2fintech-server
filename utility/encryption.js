@@ -56,12 +56,16 @@ function parseResponseData(encryptedResponseData, keyStr, ivStr) {
   return JSON.parse(decrypted);
 }
 
-async function getBearerToken(clientId, clientSecret) {
+async function getBearerToken(
+  clientId,
+  clientSecret,
+  scope = process.env.SAMMAAN_SCOPE
+) {
   const params = new URLSearchParams();
   params.append("grant_type", "client_credentials");
   params.append("client_id", clientId);
   params.append("client_secret", clientSecret);
-  params.append("scope", "4a8e1fe6-5938-43a9-b18f-6bc8b6b419a5/.default");
+  params.append("scope", scope);
 
   const response = await axios.post(
     "https://login.microsoftonline.com/cc189639-817e-4763-ac0b-3d792562a585/oauth2/v2.0/token",
