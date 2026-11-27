@@ -3,18 +3,22 @@ const axios = require("axios");
 const SecuredLoan = require("../../model/secured_loan");
 const { getBearerToken, prepareRequestData, parseResponseData } = require("../../utility/encryption");
 
-const SAMMAAN_BASE_URL = process.env.SAMMAAN_BASE_URL || "https://gatewayqa.sammaancapital.com";
+const SAMMAAN_BASE_URL = process.env.SAMMAAN_BASE_URL;
 
-const getSammaanCreds = () => ({
-  clientId: process.env.SAMMAAN_CLIENT_ID,
-  clientSecret: process.env.SAMMAAN_CLIENT_SECRET,
-  apikey: process.env.SAMMAAN_API_KEY,
-  generateUniqueIdUrl: `${SAMMAAN_BASE_URL}/esb/ibhfl/v2/generateuniqueid/getid`,
-  middlewareUrl: `${SAMMAAN_BASE_URL}/esb/middlewareencryptdataapi/v1/encryptdata`,
-});
+const getSammaanCreds = () => {
+  const baseUrl = (process.env.SAMMAAN_BASE_URL || SAMMAAN_BASE_URL).replace(/\/$/, "");
+  return {
+    clientId: process.env.SAMMAAN_CLIENT_ID,
+    clientSecret: process.env.SAMMAAN_CLIENT_SECRET,
+    apikey: process.env.SAMMAAN_API_KEY,
+    scope: process.env.SAMMAAN_SCOPE,
+    generateUniqueIdUrl: `${baseUrl}/esb/ibhfl/v2/generateuniqueid/getid`,
+    middlewareUrl: `${baseUrl}/esb/middlewareencryptdataapi/v1/encryptdata`,
+  };
+};
 
 async function getTokenAndUniqueId(creds, consumerSystemName = "F2Fintech") {
-  const token = await getBearerToken(creds.clientId, creds.clientSecret);
+  const token = await getBearerToken(creds.clientId, creds.clientSecret, creds.scope);
   const messageId = uuidv4().replace(/-/g, "");
 
   const uniqueIdResponse = await axios.post(
