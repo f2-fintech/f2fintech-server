@@ -6,6 +6,7 @@
 
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const CustomerModel = require("../model/customer");
 let firebaseAdmin = null;
 
 try {
@@ -103,9 +104,71 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+/**
+ * Role-based authorization factory: verifies token and checks DB role against allowedRoles.
+ */
+const requireRoles = (allowedRoles = ["admin"]) => {
+  const normalizedAllowed = new Set(allowedRoles.map((r) => String(r).toLowerCase().trim()));
+  return async (req, res, next) => {
+    try {
+      const authResult = await verifyUserToken(req);
+      if (!authResult.authenticated || !authResult.user) {
+        return res.status(401).json({
+          success: false,
+          error: "Authentication required for authorized access.",
+        });
+      }
+
+      const userId = authResult.user.id;
+      let role = authResult.user.role;
+      if (userId) {
+        const dbUser = await CustomerModel.findByPk(userId, {
+          attributes: ["id", "role", "status", "company_id"],
+        });
+        if (!dbUser || dbUser.status === "inactive") {
+          return res.status(403).json({
+            success: false,
+            error: "Account is inactive or not authorized.",
+          });
+        }
+        role = dbUser.role;
+        req.user = {
+          ...authResult.user,
+          id: dbUser.id,
+          role: dbUser.role,
+          company_id: dbUser.company_id,
+        };
+      }
+
+      const cleanRole = String(role || "").toLowerCase().trim();
+      if (!normalizedAllowed.has(cleanRole)) {
+        return res.status(403).json({
+          success: false,
+          error: `Role privileges (${Array.from(normalizedAllowed).join(", ")}) required.`,
+        });
+      }
+
+      return next();
+    } catch (err) {
+      return res.status(500).json({
+        success: false,
+        error: "Authorization check failed.",
+      });
+    }
+  };
+};
+
+const requireAdmin = requireRoles(["admin"]);
+const requireComplianceOrAdmin = requireRoles(["compliance_officer", "admin"]);
+const requireStaffRole = requireRoles(["support_agent", "compliance_officer", "admin"]);
+
 module.exports = {
   requireAuth,
   optionalAuth,
+  requireRoles,
+  requireAdmin,
+  requireComplianceOrAdmin,
+  requireStaffRole,
   verifyUserToken,
 };
 

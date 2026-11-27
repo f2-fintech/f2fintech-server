@@ -13,6 +13,7 @@ const dotenv = require('dotenv');
 const config = require("./config");
 const rateLimiter = require("./utility/rateLimiter");
 const { validateRequiredSecrets } = require("./config/envValidator");
+const { verifyChatbotHarnessIntegrity } = require("./modules/chatbot/utils/harnessIntegrity");
 const v1Routes = require("./v1/routes");
 const { passport } = require("./config/passportConfig");
 const { connectToMysql } = require("./db");
@@ -20,8 +21,9 @@ const { connectToMysql } = require("./db");
 // Load environment variables.....
 dotenv.config();
 
-// Fail fast on startup if any required provider secret is missing
+// Fail fast on startup if any required provider secret or safety harness integrity check fails
 validateRequiredSecrets();
+verifyChatbotHarnessIntegrity();
 
 const app = express();
 

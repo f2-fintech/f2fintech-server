@@ -20,9 +20,11 @@ function validateRequiredSecrets() {
     missing.push("TIMBLEGLANCE_API_KEY");
   }
 
-  // Together AI
-  if (!process.env.TOGETHER_API_KEY) {
-    missing.push("TOGETHER_API_KEY");
+  // AI Assistant (Google Gemini primary, Together AI optional legacy)
+  if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+    console.warn(
+      "[Startup Warning] GEMINI_API_KEY is not set. Conversational AI NLU endpoints will require GEMINI_API_KEY before live LLM responses."
+    );
   }
 
   if (missing.length > 0) {

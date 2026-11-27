@@ -54,9 +54,48 @@ const bankkaroRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const chatbotRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => req.ip || req.headers["x-forwarded-for"] || "unknown",
+  message: {
+    success: false,
+    error: "Too many assistant requests. Please wait a moment before trying again.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const chatbotUploadRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => req.ip || req.headers["x-forwarded-for"] || "unknown",
+  message: {
+    success: false,
+    error: "Too many document upload attempts. Please wait a few minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const chatbotOtpRateLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 6,
+  keyGenerator: (req) => req.ip || req.headers["x-forwarded-for"] || "unknown",
+  message: {
+    success: false,
+    error: "Too many OTP verification attempts. Please wait 5 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   togetherAiRateLimiter,
   digitapRateLimiter,
   bankkaroRateLimiter,
+  chatbotRateLimiter,
+  chatbotUploadRateLimiter,
+  chatbotOtpRateLimiter,
 };
 
