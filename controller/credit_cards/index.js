@@ -100,6 +100,91 @@ function buildTrackingUrl(networkUrl, clickId, customerId = "guest") {
   return url;
 }
 
+const CARD_CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
+let cardCatalogCache = { fetchedAt: 0, cards: [] };
+
+/**
+ * Fetch and filter BankKaro credit cards catalog with short-lived in-memory cache.
+ */
+async function fetchCreditCardsCatalog({ category, bank, free_cards, search, sort_by } = {}) {
+  const now = Date.now();
+  let allCards = cardCatalogCache.cards;
+
+  if (!Array.isArray(allCards) || allCards.length === 0 || now - cardCatalogCache.fetchedAt > CARD_CATALOG_CACHE_TTL_MS) {
+    const data = await callBankKaroAPI("/partner/cardgenius/v2/cards", "GET");
+    let parsed = [];
+    if (Array.isArray(data)) {
+      parsed = data;
+    } else if (data?.data && Array.isArray(data.data)) {
+      parsed = data.data;
+    } else if (data?.data && Array.isArray(data.data.cards)) {
+      parsed = data.data.cards;
+    }
+    if (parsed.length > 0) {
+      allCards = parsed;
+      cardCatalogCache = { fetchedAt: now, cards: parsed };
+    }
+  }
+
+  let cards = Array.isArray(allCards) ? [...allCards] : [];
+
+  if (cards.length > 0) {
+    if (category && category !== "all") {
+      const catLower = String(category).toLowerCase();
+      cards = cards.filter((card) => {
+        if (!card.tags || !Array.isArray(card.tags)) return false;
+        return card.tags.some(
+          (t) =>
+            (t.name && t.name.toLowerCase().includes(catLower)) ||
+            (t.seo_alias && t.seo_alias.toLowerCase().includes(catLower))
+        );
+      });
+    }
+
+    if (bank && bank !== "all") {
+      const bankLower = String(bank).toLowerCase();
+      cards = cards.filter(
+        (card) =>
+          (card.bank_name && card.bank_name.toLowerCase().includes(bankLower)) ||
+          (card.name && card.name.toLowerCase().includes(bankLower))
+      );
+    }
+
+    if (free_cards === "true" || free_cards === "1" || free_cards === true) {
+      cards = cards.filter(
+        (card) =>
+          card.joining_fee_text === "0" ||
+          card.joining_fee_text === "Free" ||
+          card.joining_fee_text === "Nil" ||
+          card.annual_fee_text === "0" ||
+          card.annual_fee_text === "Nil"
+      );
+    }
+
+    if (search && String(search).trim()) {
+      const sLower = String(search).trim().toLowerCase();
+      cards = cards.filter(
+        (card) =>
+          (card.name && card.name.toLowerCase().includes(sLower)) ||
+          (card.bank_name && card.bank_name.toLowerCase().includes(sLower)) ||
+          (card.card_type && card.card_type.toLowerCase().includes(sLower))
+      );
+    }
+
+    if (sort_by === "rating") {
+      cards.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+    } else if (sort_by === "savings") {
+      cards.sort((a, b) => (parseFloat(b.annual_saving) || 0) - (parseFloat(a.annual_saving) || 0));
+    } else if (sort_by === "fee_low_to_high") {
+      cards.sort((a, b) => (parseFloat(a.joining_fee_text) || 0) - (parseFloat(b.joining_fee_text) || 0));
+    }
+  }
+
+  return cards;
+}
+
+exports.fetchCreditCardsCatalog = fetchCreditCardsCatalog;
+
 // ------------------------------ CONTROLLER METHODS ------------------------------
 
 /**
@@ -108,70 +193,7 @@ function buildTrackingUrl(networkUrl, clickId, customerId = "guest") {
  */
 exports.getAllCards = async (req, res) => {
   try {
-    const { category, bank, free_cards, search, sort_by } = req.query;
-
-    const data = await callBankKaroAPI("/partner/cardgenius/v2/cards", "GET");
-    let cards = [];
-
-    if (Array.isArray(data)) {
-      cards = data;
-    } else if (data.data && Array.isArray(data.data)) {
-      cards = data.data;
-    } else if (data.data && Array.isArray(data.data.cards)) {
-      cards = data.data.cards;
-    }
-
-    // Filter in-memory if query parameters are provided
-    if (cards && cards.length > 0) {
-      if (category && category !== "all") {
-        const catLower = category.toLowerCase();
-        cards = cards.filter((card) => {
-          if (!card.tags || !Array.isArray(card.tags)) return false;
-          return card.tags.some(
-            (t) =>
-              (t.name && t.name.toLowerCase().includes(catLower)) ||
-              (t.seo_alias && t.seo_alias.toLowerCase().includes(catLower))
-          );
-        });
-      }
-
-      if (bank && bank !== "all") {
-        const bankLower = bank.toLowerCase();
-        cards = cards.filter(
-          (card) => card.bank_name && card.bank_name.toLowerCase().includes(bankLower)
-        );
-      }
-
-      if (free_cards === "true" || free_cards === "1") {
-        cards = cards.filter(
-          (card) =>
-            card.joining_fee_text === "0" ||
-            card.joining_fee_text === "Free" ||
-            card.joining_fee_text === "Nil" ||
-            (card.annual_fee_text === "0" || card.annual_fee_text === "Nil")
-        );
-      }
-
-      if (search && search.trim()) {
-        const sLower = search.trim().toLowerCase();
-        cards = cards.filter(
-          (card) =>
-            (card.name && card.name.toLowerCase().includes(sLower)) ||
-            (card.bank_name && card.bank_name.toLowerCase().includes(sLower)) ||
-            (card.card_type && card.card_type.toLowerCase().includes(sLower))
-        );
-      }
-
-      if (sort_by === "rating") {
-        cards.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
-      } else if (sort_by === "savings") {
-        cards.sort((a, b) => (parseFloat(b.annual_saving) || 0) - (parseFloat(a.annual_saving) || 0));
-      } else if (sort_by === "fee_low_to_high") {
-        cards.sort(
-          (a, b) => (parseFloat(a.joining_fee_text) || 0) - (parseFloat(b.joining_fee_text) || 0)
-        );
-      }
-    }
+    const cards = await fetchCreditCardsCatalog(req.query || {});
 
     return res.status(200).json({
       status: "Success",

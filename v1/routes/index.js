@@ -34,6 +34,7 @@ const bankkaroRoutes = require("../../modules/bankkaro/bankkaro.routes");
 const digitapRoutes = require("../../modules/digitap/digitap.routes");
 const digitapController = require("../../modules/digitap/digitap.controller");
 const togetheraiRoutes = require("../../modules/togetherai/togetherai.routes");
+const chatbotRoutes = require("../../modules/chatbot/chatbot.routes");
 const ChannelPartnerController = require("../../controller/channel_partner/index");
 const BlogController = require("../../controller/blogs/index");
 const SitemapController = require("../../controller/sitemap/index");
@@ -242,7 +243,8 @@ router.post("/channel-partner", ChannelPartnerController.createChannelPartner);
 router.post("/careers", CareersController.createCareer);
 
 
-//-----------------------------------CHAT BOT (TOGETHER AI MODULE)---------------------------------------
+//-----------------------------------CHAT BOT (GEMINI + STRICT KB MODULE)---------------------------------------
+router.use('/chatbot', chatbotRoutes);
 router.use('/chat', togetheraiRoutes);
 router.use('/api/chat', togetheraiRoutes);
 

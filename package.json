@@ -4,7 +4,11 @@
   "description": "Nodejs API",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run lint:syntax && npm run verify:harnesses && npm run eval:chatbot",
+    "lint:syntax": "node modules/chatbot/evals/checkSyntax.js",
+    "verify:harnesses": "node -e \"require('./modules/chatbot/utils/harnessIntegrity').verifyChatbotHarnessIntegrity(); console.log('Harness integrity verified.');\"",
+    "eval:chatbot": "node modules/chatbot/evals/runEvals.js",
+    "eval:chatbot:live": "node -e \"process.env.EVAL_LIVE_LLM='true'; require('./modules/chatbot/evals/runEvals.js')\"",
     "start": "node index.js",
     "dev": "nodemon ./index.js"
   },
@@ -12,6 +16,7 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.654.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@sendgrid/mail": "^8.1.4",
     "@upstash/vector": "^1.2.1",
     "bcryptjs": "^2.4.3",
@@ -34,7 +39,8 @@
     "sequelize": "^6.37.3",
     "socket.io": "^4.8.3",
     "twilio": "^5.3.6",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.2"

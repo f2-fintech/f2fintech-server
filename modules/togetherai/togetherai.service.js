@@ -1,65 +1,62 @@
 /**
- * Together AI Service - Outbound HTTP Integration
- * Encapsulates communication with Together AI completions API.
- * Never leaks API keys or full authorization headers in logs or errors.
+ * Legacy Chat Service Proxy
+ * Delegates to the unified Gemini + Strict F2Fintech Internal-KB Chatbot Orchestrator.
+ * Never invents external lenders, unverified rates, or leaks API keys.
  * Copyright © 2024-2026, F2FINTECH. ALL RIGHTS RESERVED.
  */
 
-const axios = require("axios");
-const { searchSimilarDocs } = require("../../utility/vector-context");
-
-const TOGETHER_API_URL = "https://api.together.xyz/v1/chat/completions";
-const MODEL_NAME = "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free";
+const crypto = require("crypto");
+const { ChatbotSession, syncChatbotModels } = require("../../model/chatbot");
+const { hashToken } = require("../chatbot/utils/piiCrypto");
+const { processChatTurn } = require("../chatbot/services/gemini.service");
+const { resolveAuthorizedCustomerId } = require("../chatbot/services/support.service");
 
 /**
- * Send chat message to Together AI model with RAG context
+ * Process legacy chat message using the strict internal-data Gemini orchestrator.
  */
-async function generateChatCompletion(userMessage) {
-  const apiKey = process.env.TOGETHER_API_KEY;
-  if (!apiKey) {
-    throw new Error("TOGETHER_API_KEY is missing from server environment");
+async function generateChatCompletion(userMessage, req = null) {
+  await syncChatbotModels();
+  const companyId = Number(req?.headers?.companyid || req?.headers?.CompanyId || req?.body?.companyId || 101);
+  const requestedSid = req?.body?.sessionId;
+  const preferredLanguage = req?.body?.language;
+
+  let session = requestedSid ? await ChatbotSession.findByPk(requestedSid) : null;
+  let issuedGuestToken;
+
+  if (session && session.customer_id && req?.user?.id && Number(session.customer_id) !== Number(req.user.id)) {
+    session = null;
   }
 
-  // Attempt to fetch context from vector store; fail gracefully if unavailable
-  let context = "";
-  try {
-    context = await searchSimilarDocs(userMessage, 5);
-  } catch (vectorErr) {
-    console.warn("[TogetherAI Service] Vector context search skipped:", vectorErr.message);
+  if (!session) {
+    const rawGuestToken = req?.headers?.["x-chatbot-session-token"] || crypto.randomBytes(24).toString("hex");
+    issuedGuestToken = rawGuestToken;
+    session = await ChatbotSession.create({
+      id: crypto.randomUUID(),
+      company_id: companyId,
+      customer_id: req?.user?.id || null,
+      guest_token_hash: hashToken(rawGuestToken),
+      language: preferredLanguage === "hi" ? "hi" : "en",
+      context_json: {},
+      status: "active",
+    });
   }
 
-  const systemPrompt = `You are a helpful AI finance assistant for F2 Fintech. Use the following context extracted from official resources to answer the user's question accurately.
-If the context does not contain the answer, provide helpful, polite financial guidance.
-Context: ${context || "F2 Fintech provides instant personal loans, business loans, doctor loans, credit card comparison, and CIBIL score checks."}`;
+  const authorizedCustomerId = req ? await resolveAuthorizedCustomerId(req, session) : null;
+  const turn = await processChatTurn({
+    session,
+    rawMessage: userMessage,
+    authorizedCustomerId,
+    companyId,
+    preferredLanguage,
+  });
 
-  try {
-    const response = await axios.post(
-      TOGETHER_API_URL,
-      {
-        model: MODEL_NAME,
-        messages: [
-          {
-            role: "user",
-            content: `${systemPrompt}\n\nQuestion: ${userMessage}`,
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 30000,
-      }
-    );
-
-    const reply = response.data?.choices?.[0]?.message?.content || "";
-    return reply;
-  } catch (error) {
-    // Sanitized logging: never print full authorization header or API key
-    console.error("[TogetherAI Service] Completion error:", error.message);
-    throw new Error("Failed to receive response from AI model.");
-  }
+  return {
+    reply: turn.reply,
+    sessionId: session.id,
+    guestToken: issuedGuestToken,
+    intent: turn.intent,
+    uiPayloads: turn.uiPayloads || [],
+  };
 }
 
 module.exports = {

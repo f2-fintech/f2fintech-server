@@ -16,6 +16,10 @@ const CustomerDocumentModel = sequelize.define(
     customer_id: {
       type: Sequelize.INTEGER,
     },
+    customer_application_id: {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    },
     document_url: {
       type: Sequelize.STRING,
     },
